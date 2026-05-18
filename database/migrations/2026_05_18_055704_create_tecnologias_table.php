@@ -21,7 +21,7 @@ return new class extends Migration
             $table->enum('estado', ['En funcionamiento', 'Guardado', 'Malogrado'])->default('En funcionamiento');
             
             // Asignación: a quién está designado (Ej: monitor de Jose)
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
             
             $table->timestamps();
         });

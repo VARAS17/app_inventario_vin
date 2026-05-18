@@ -38,7 +38,10 @@
                     <tr wire:key="equipo-{{ $equipo->id }}" class="hover:bg-blue-50/30 transition">
                         <td class="px-6 py-4">
                             <div class="font-medium text-gray-900">{{ $equipo->nombre }}</div>
-                            <div class="text-xs text-blue-600 font-semibold">{{ $equipo->user->nombre ?? 'Sin asignar' }}</div>
+                            <!-- Cambiado para mostrar nombre y apellido del Personal -->
+                            <div class="text-xs text-blue-600 font-semibold">
+                                {{ $equipo->personal ? $equipo->personal->nombre . ' ' . $equipo->personal->apellido : 'Sin asignar' }}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-gray-600">
                             <div class="text-sm font-bold">{{ $equipo->marca }}</div>
@@ -100,7 +103,6 @@
                         </div>
                     </div>
 
-                    <!-- CAMPO LUGAR COMO SELECT PARA EVITAR ERRORES DE ENUM -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 italic">Lugar / Ubicación</label>
                         <select wire:model="lugar" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500">
@@ -117,19 +119,21 @@
                         <label class="block text-sm font-semibold text-gray-700 italic">Estado</label>
                         <select wire:model="estado" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
                             <option value="En funcionamiento">En funcionamiento</option>
-                            <option value="En reparación">En reparación</option>
-                            <option value="Obsoleto">Obsoleto</option>
+                            <option value="Guardado">Guardado</option>
+                            <option value="Malogrado">Malogrado</option>
                         </select>
                     </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 italic">Asignar a:</label>
-                        <select wire:model="user_id" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        <!-- Cambiado wire:model a personal_id y el loop a $personales -->
+                        <select wire:model="personal_id" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
                             <option value="">-- Sin asignar --</option>
-                            @foreach($users as $user)
-                                <option value="{{ $user->id }}">{{ $user->nombre }} {{ $user->apellido }}</option>
+                            @foreach($personales as $persona)
+                                <option value="{{ $persona->id }}">{{ $persona->nombre }} {{ $persona->apellido }}</option>
                             @endforeach
                         </select>
+                        @error('personal_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                 </div>
             </div>

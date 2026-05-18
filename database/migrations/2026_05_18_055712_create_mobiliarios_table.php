@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('color');    // Solicitado: color
             // Estado solicitado: bueno, regular, a la basura
             $table->enum('estado', ['Bueno', 'Regular', 'A la basura'])->default('Bueno');
-             $table->enum('lugar',['Oficina principal','Sala de Reuniones','Oficina de comunicaciones', 'Almacen', 'Cocina'])->default('Oficina Principal');
-            // Asignación opcional por si el mueble es de alguien específico
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->enum('lugar',['Oficina principal','Sala de Reuniones','Oficina de comunicaciones', 'Almacen', 'Cocina'])->default('Oficina Principal');
+            // Asignación opcional por si el mueble es de alguien específico del personal
+            $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
             
             $table->timestamps();
         });

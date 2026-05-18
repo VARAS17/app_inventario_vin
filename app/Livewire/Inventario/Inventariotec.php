@@ -5,29 +5,30 @@ namespace App\Livewire\Inventario;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use App\Models\Tecnologia;
-use App\Models\User;
+use App\Models\Personal; // Cambiado de User a Personal
 
 class Inventariotec extends Component
 {
-    // Aplicamos el layout de Breeze/Jetstream
     #[Layout('layouts.app')]
 
     // Propiedades del componente
-    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina principal', $user_id, $equipo_id;
+    // Cambiamos user_id por personal_id para ser consistentes con la DB
+    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina principal', $personal_id, $equipo_id;
     public $search = ''; 
     public $isOpen = false;
 
-    // Reglas de validación
     protected $rules = [
         'nombre' => 'required|min:3',
         'marca' => 'required',
         'estado' => 'required',
         'lugar' => 'required|in:Oficina principal,Sala de Reuniones,Oficina de comunicaciones,Almacen,Cocina',
+        'personal_id' => 'nullable|exists:personal,id', // Validación para asegurar que el ID existe
     ];
 
     public function render()
     {
-        $equipos = Tecnologia::with('user')
+        // Cargamos la relación 'personal' definida en el modelo Tecnologia
+        $equipos = Tecnologia::with('personal')
             ->where(function($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
                       ->orWhere('marca', 'like', '%' . $this->search . '%')
@@ -37,10 +38,9 @@ class Inventariotec extends Component
             ->latest()
             ->get();
 
-        // IMPORTANTE: La vista ahora está en livewire.inventario.inventariotec
         return view('livewire.inventario.inventariotec', [
             'equipos' => $equipos,
-            'users' => User::all()
+            'personales' => Personal::all() // Enviamos la lista de personal a la vista
         ]);
     }
 
@@ -59,7 +59,7 @@ class Inventariotec extends Component
         $this->serie = $equipo->serie;
         $this->estado = $equipo->estado;
         $this->lugar = $equipo->lugar; 
-        $this->user_id = $equipo->user_id;
+        $this->personal_id = $equipo->personal_id; // Cambiado
 
         $this->openModal();
     }
@@ -74,7 +74,7 @@ class Inventariotec extends Component
             'serie' => $this->serie,
             'estado' => $this->estado,
             'lugar' => $this->lugar, 
-            'user_id' => $this->user_id ?: null,
+            'personal_id' => $this->personal_id ?: null, // Cambiado
         ]);
 
         session()->flash('message', $this->equipo_id ? 'Equipo actualizado.' : 'Equipo creado.');
@@ -98,7 +98,7 @@ class Inventariotec extends Component
         $this->serie = '';
         $this->estado = 'En funcionamiento'; 
         $this->lugar = 'Oficina principal'; 
-        $this->user_id = ''; 
+        $this->personal_id = ''; // Cambiado
         $this->equipo_id = '';
     }
 }

@@ -16,14 +16,15 @@ class Mobiliario extends Model
         'color',
         'estado',
         'lugar',
-        'user_id'
+        'personal_id' // Cambiado de user_id a personal_id
     ];
 
     /**
      * Obtener el responsable del mueble (Relación inversa).
      */
-    public function user(): BelongsTo
+    public function personal(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // Ahora pertenece al modelo Personal
+        return $this->belongsTo(Personal::class);
     }
 }

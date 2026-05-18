@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Inventario\Inventariotec;
 use App\Livewire\Inventario\Inventariomobi;
 use App\Livewire\Inventario\Inventarioutil;
+use App\Livewire\Inventario\Personal;
 
 Route::view('/', 'welcome');
 
@@ -22,6 +23,10 @@ Route::get('inventariomobi', Inventariomobi::class)
 Route::get('inventarioutil', Inventarioutil::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('inventarioutil');
+
+Route::get('personal', Personal::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('personal');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])

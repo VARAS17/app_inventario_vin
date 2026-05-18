@@ -16,14 +16,15 @@ class Tecnologia extends Model
         'serie',
         'lugar',
         'estado',
-        'user_id'
+        'personal_id' // Cambiado de user_id a personal_id
     ];
 
     /**
-     * Obtener el usuario (personal) al que está asignado el equipo.
+     * Obtener el personal al que está asignado el equipo (Relación inversa).
      */
-    public function user(): BelongsTo
+    public function personal(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // Ahora pertenece al modelo Personal
+        return $this->belongsTo(Personal::class);
     }
 }
