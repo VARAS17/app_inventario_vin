@@ -4,31 +4,39 @@ namespace App\Livewire\Inventario;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\WithFileUploads;
 use App\Models\Mobiliario;
-use App\Models\User;
+use App\Models\Personal;
+use Illuminate\Support\Facades\Storage;
 
 class Inventariomobi extends Component
 {
-    // Usamos el atributo para definir el layout de Breeze/Jetstream
+    use WithFileUploads;
+
     #[Layout('layouts.app')]
 
-    // Propiedades del componente
-    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina principal', $user_id, $mueble_id;
+    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina principal', $personal_id, $mueble_id;
+    public $imagen; 
+    public $imagen_actual; 
     public $search = '';
     public $isOpen = false;
 
-    // Reglas de validación
-    protected $rules = [
-        'nombre' => 'required|min:3',
-        'material' => 'required',
-        'color' => 'required',
-        'estado' => 'required',
-        'lugar' => 'required',
-    ];
+    protected function rules()
+    {
+        return [
+            'nombre' => 'required|min:3',
+            'material' => 'required',
+            'color' => 'required',
+            'estado' => 'required',
+            'lugar' => 'required',
+            'personal_id' => 'nullable|exists:personal,id',
+            'imagen' => 'nullable|image|max:2048',
+        ];
+    }
 
     public function render()
     {
-        $muebles = Mobiliario::with('user')
+        $muebles = Mobiliario::with('personal')
             ->where(function($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
                       ->orWhere('material', 'like', '%' . $this->search . '%')
@@ -37,10 +45,9 @@ class Inventariomobi extends Component
             ->latest()
             ->get();
 
-        // IMPORTANTE: Asegúrate de que la vista esté en resources/views/livewire/inventario/inventariomobi.blade.php
         return view('livewire.inventario.inventariomobi', [
             'muebles' => $muebles,
-            'users' => User::all()
+            'personal_list' => Personal::all()
         ]);
     }
 
@@ -59,7 +66,8 @@ class Inventariomobi extends Component
         $this->color = $mueble->color;
         $this->estado = $mueble->estado;
         $this->lugar = $mueble->lugar;
-        $this->user_id = $mueble->user_id;
+        $this->personal_id = $mueble->personal_id;
+        $this->imagen_actual = $mueble->imagen; 
 
         $this->openModal();
     }
@@ -68,16 +76,32 @@ class Inventariomobi extends Component
     {
         $this->validate();
 
-        Mobiliario::updateOrCreate(['id' => $this->mueble_id], [
+        $datos = [
             'nombre' => $this->nombre,
             'material' => $this->material,
             'color' => $this->color,
             'estado' => $this->estado,
             'lugar' => $this->lugar,
-            'user_id' => $this->user_id ?: null,
-        ]);
+            'personal_id' => $this->personal_id ?: null,
+        ];
 
-        session()->flash('message', $this->mueble_id ? 'Mueble actualizado.' : 'Mueble registrado.');
+        if ($this->imagen) {
+            // Eliminar imagen anterior del disco 'local'
+            if ($this->mueble_id) {
+                $muebleAnterior = Mobiliario::find($this->mueble_id);
+                if ($muebleAnterior && $muebleAnterior->imagen) {
+                    Storage::disk('local')->delete($muebleAnterior->imagen);
+                }
+            }
+            // Guardar en disco 'local' (storage/app/mobiliarios)
+            $datos['imagen'] = $this->imagen->store('mobiliarios', 'local');
+        }
+
+        Mobiliario::updateOrCreate(['id' => $this->mueble_id], $datos);
+
+        $this->dispatch('mueble-guardado', 
+            msg: $this->mueble_id ? 'Mueble actualizado correctamente' : 'Mueble registrado con éxito'
+        );
 
         $this->closeModal();
         $this->resetInputFields();
@@ -85,20 +109,28 @@ class Inventariomobi extends Component
 
     public function eliminar($id)
     {
-        Mobiliario::find($id)->delete();
-        session()->flash('message', 'Mueble eliminado.');
+        $mueble = Mobiliario::find($id);
+        
+        // Borrar del disco 'local'
+        if ($mueble->imagen) {
+            Storage::disk('local')->delete($mueble->imagen);
+        }
+
+        $mueble->delete();
+        $this->dispatch('mueble-guardado', msg: 'Mueble eliminado correctamente');
     }
 
     public function openModal() { $this->isOpen = true; }
-    public function closeModal() { $this->isOpen = false; }
+    
+    public function closeModal() { 
+        $this->isOpen = false; 
+        $this->resetInputFields();
+    }
 
     private function resetInputFields() {
-        $this->nombre = '';
-        $this->material = '';
-        $this->color = '';
-        $this->estado = 'Bueno';
-        $this->lugar = 'Oficina principal';
-        $this->user_id = '';
-        $this->mueble_id = '';
+        $this->nombre = ''; $this->material = ''; $this->color = '';
+        $this->estado = 'Bueno'; $this->lugar = 'Oficina principal';
+        $this->personal_id = ''; $this->mueble_id = '';
+        $this->imagen = null; $this->imagen_actual = null;
     }
 }

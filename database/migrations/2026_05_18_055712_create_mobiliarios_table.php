@@ -13,13 +13,16 @@ return new class extends Migration
     {
         Schema::create('mobiliarios', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre'); // Ej: Escritorio, Archivero
-            $table->string('material'); // Solicitado: material
-            $table->string('color');    // Solicitado: color
-            // Estado solicitado: bueno, regular, a la basura
+            $table->string('nombre'); 
+            $table->string('material'); 
+            $table->string('color');    
+            
+            // Campo de imagen añadido
+            $table->string('imagen')->nullable(); // Guarda la ruta del archivo
+            
             $table->enum('estado', ['Bueno', 'Regular', 'A la basura'])->default('Bueno');
             $table->enum('lugar',['Oficina principal','Sala de Reuniones','Oficina de comunicaciones', 'Almacen', 'Cocina'])->default('Oficina Principal');
-            // Asignación opcional por si el mueble es de alguien específico del personal
+            
             $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
             
             $table->timestamps();

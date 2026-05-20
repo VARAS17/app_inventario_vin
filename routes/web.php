@@ -31,5 +31,30 @@ Route::get('personal', Personal::class)
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
+
+Route::get('/personal-foto/{path}', function ($path) {
+    // Verificamos si el archivo existe en el disco local
+    if (!Storage::disk('local')->exists($path)) {
+        abort(404);
+    }
+
+    $file = Storage::disk('local')->get($path);
+    $type = Storage::disk('local')->mimeType($path);
+
+    $response = Response::make($file, 200);
+    $response->header("Content-Type", $type);
+
+    return $response;
+})->name('personal.foto')->where('path', '.*');
+
+// Ejemplo de ruta en web.php
+Route::get('/mobiliario-foto/{path}', function ($path) {
+    if (!Storage::disk('local')->exists($path)) abort(404);
+    $file = Storage::disk('local')->get($path);
+    $type = Storage::disk('local')->mimeType($path);
+    return response($file)->header('Content-Type', $type);
+})->name('mobiliario.foto')->where('path', '.*');
 
 require __DIR__.'/auth.php';

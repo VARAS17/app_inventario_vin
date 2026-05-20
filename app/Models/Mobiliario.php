@@ -16,8 +16,9 @@ class Mobiliario extends Model
         'color',
         'estado',
         'lugar',
-        'personal_id' // Cambiado de user_id a personal_id
-    ];
+        'personal_id', // Cambiado de user_id a personal_id
+        'imagen'
+        ];
 
     /**
      * Obtener el responsable del mueble (Relación inversa).

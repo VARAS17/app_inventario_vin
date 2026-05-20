@@ -39,10 +39,11 @@
                     <tr wire:key="persona-{{ $persona->id }}" class="hover:bg-blue-50/30 transition">
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
-                                <!-- Foto de Perfil circular -->
+                                <!-- Foto de Perfil circular con disco Local -->
                                 <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200 border border-gray-100">
                                     @if($persona->foto_perfil)
-                                        <img src="{{ asset('storage/' . $persona->foto_perfil) }}" alt="Foto" class="h-full w-full object-cover">
+                                        {{-- Cambiado: Usamos una ruta dinámica para leer del disco local --}}
+                                        <img src="{{ route('personal.foto', ['path' => $persona->foto_perfil]) }}" alt="Foto" class="h-full w-full object-cover">
                                     @else
                                         <div class="h-full w-full flex items-center justify-center text-gray-400 font-bold bg-blue-100 text-blue-600 text-xs">
                                             {{ substr($persona->nombre, 0, 1) }}{{ substr($persona->apellido, 0, 1) }}
@@ -51,7 +52,6 @@
                                 </div>
                                 <div>
                                     <div class="font-medium text-gray-900">{{ $persona->nombre }} {{ $persona->apellido }}</div>
-                                    <div class="text-xs text-gray-500">ID: #{{ $persona->id }}</div>
                                 </div>
                             </div>
                         </td>
@@ -66,7 +66,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                 </button>
-                                <button wire:click="eliminar({{ $persona->id }})" wire:confirm="¿Estás seguro de eliminar este registro? Esto podría afectar a los equipos asignados." class="text-red-400 hover:text-red-600">
+                                <button wire:click="eliminar({{ $persona->id }})" wire:confirm="¿Estás seguro de eliminar este registro?" class="text-red-400 hover:text-red-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -107,9 +107,11 @@
                         <div class="relative">
                             <div class="h-24 w-24 rounded-full overflow-hidden bg-gray-100 border-2 border-blue-100 shadow-inner">
                                 @if ($foto_perfil)
+                                    {{-- La vista previa temporal de Livewire sí funciona con asset/url --}}
                                     <img src="{{ $foto_perfil->temporaryUrl() }}" class="h-full w-full object-cover">
                                 @elseif ($foto_actual)
-                                    <img src="{{ asset('storage/' . $foto_actual) }}" class="h-full w-full object-cover">
+                                    {{-- Cambiado: Foto almacenada en disco Local --}}
+                                    <img src="{{ route('personal.foto', ['path' => $foto_actual]) }}" class="h-full w-full object-cover">
                                 @else
                                     <div class="h-full w-full flex items-center justify-center text-gray-300">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,10 +121,11 @@
                                 @endif
                             </div>
                         </div>
-                        <input type="file" wire:model="foto_perfil" id="foto_perfil" class="hidden">
+                        <input type="file" wire:model="foto_perfil" id="foto_perfil" class="hidden" accept="image/*">
                         <label for="foto_perfil" class="mt-2 text-xs font-bold text-blue-600 cursor-pointer hover:underline">
                             {{ $foto_perfil || $foto_actual ? 'Cambiar Foto' : 'Subir Foto' }}
                         </label>
+                        <div wire:loading wire:target="foto_perfil" class="text-xs text-gray-500">Cargando preview...</div>
                         @error('foto_perfil') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
@@ -173,4 +176,4 @@
         </div>
     </div>
     @endif
-</div>
+</div>  

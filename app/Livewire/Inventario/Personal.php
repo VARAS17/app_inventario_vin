@@ -5,23 +5,21 @@ namespace App\Livewire\Inventario;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
-use App\Models\Personal as PersonalModel; // Usamos un alias para evitar conflicto con el nombre de la clase
+use App\Models\Personal as PersonalModel;
 use Illuminate\Support\Facades\Storage;
 
 class Personal extends Component
 {
-    use WithFileUploads; // Necesario para subir la foto de perfil
+    use WithFileUploads;
 
     #[Layout('layouts.app')]
 
-    // Propiedades del formulario
     public $nombre, $apellido, $cargo, $grado_academico, $foto_perfil, $personal_id;
-    public $foto_actual; // Para mostrar la foto que ya existe al editar
+    public $foto_actual;
     
     public $search = '';
     public $isOpen = false;
 
-    // Reglas de validación
     protected function rules()
     {
         return [
@@ -29,7 +27,6 @@ class Personal extends Component
             'apellido' => 'required|string|min:2',
             'cargo' => 'required|string',
             'grado_academico' => 'required',
-            // La foto es opcional, máximo 2MB y debe ser imagen
             'foto_perfil' => $this->foto_perfil instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile 
                              ? 'nullable|image|max:2048' 
                              : 'nullable',
@@ -44,7 +41,7 @@ class Personal extends Component
                       ->orWhere('cargo', 'like', '%' . $this->search . '%');
             })
             ->latest()
-            ->paginate(10); // Usamos paginación por si la lista crece mucho
+            ->paginate(10);
 
         return view('livewire.inventario.personal', [
             'personales' => $personales
@@ -65,8 +62,8 @@ class Personal extends Component
         $this->apellido = $persona->apellido;
         $this->cargo = $persona->cargo;
         $this->grado_academico = $persona->grado_academico;
-        $this->foto_actual = $persona->foto_perfil; // Guardamos la ruta actual
-        $this->foto_perfil = null; // Reset para el input file
+        $this->foto_actual = $persona->foto_perfil;
+        $this->foto_perfil = null;
 
         $this->openModal();
     }
@@ -82,18 +79,19 @@ class Personal extends Component
             'grado_academico' => $this->grado_academico,
         ];
 
-        // Lógica para la foto
         if ($this->foto_perfil) {
-            // Si hay una foto anterior y estamos editando, la borramos del disco
+            // Eliminamos la foto anterior del disco 'local' si existe
             if ($this->personal_id) {
                 $personaExistente = PersonalModel::find($this->personal_id);
-                if ($personaExistente->foto_perfil) {
-                    Storage::disk('public')->delete($personaExistente->foto_perfil);
+                if ($personaExistente && $personaExistente->foto_perfil) {
+                    Storage::disk('local')->delete($personaExistente->foto_perfil);
                 }
             }
             
-            // Guardamos la nueva foto en la carpeta 'perfiles' dentro de 'storage/app/public'
-            $data['foto_perfil'] = $this->foto_perfil->store('perfiles', 'public');
+            // Guardamos la nueva foto en el disco 'local' (storage/app/perfiles)
+            // Al usar 'local', el archivo persiste directamente en el servidor sin enlaces simbólicos
+            $path = $this->foto_perfil->store('perfiles', 'local');
+            $data['foto_perfil'] = $path;
         }
 
         PersonalModel::updateOrCreate(['id' => $this->personal_id], $data);
@@ -108,9 +106,9 @@ class Personal extends Component
     {
         $persona = PersonalModel::findOrFail($id);
         
-        // Borrar foto del disco si existe
+        // Borrar foto del disco 'local'
         if ($persona->foto_perfil) {
-            Storage::disk('public')->delete($persona->foto_perfil);
+            Storage::disk('local')->delete($persona->foto_perfil);
         }
 
         $persona->delete();
