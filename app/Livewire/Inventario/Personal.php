@@ -27,9 +27,10 @@ class Personal extends Component
             'apellido' => 'required|string|min:2',
             'cargo' => 'required|string',
             'grado_academico' => 'required',
+            // Se agrega mimes:jpg,jpeg,png para restringir los formatos
             'foto_perfil' => $this->foto_perfil instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile 
-                             ? 'nullable|image|max:2048' 
-                             : 'nullable',
+                            ? 'nullable|image|mimes:jpg,jpeg,png|max:2048' 
+                            : 'nullable',
         ];
     }
 

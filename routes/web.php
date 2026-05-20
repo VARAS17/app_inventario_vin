@@ -5,12 +5,19 @@ use App\Livewire\Inventario\Inventariotec;
 use App\Livewire\Inventario\Inventariomobi;
 use App\Livewire\Inventario\Inventarioutil;
 use App\Livewire\Inventario\Personal;
+use App\Livewire\Inventario\Debaja;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
 
 Route::view('/', 'welcome');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::get('debaja', Debaja::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('debaja');
 
 Route::get('inventariotec', Inventariotec::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
@@ -31,8 +38,7 @@ Route::get('personal', Personal::class)
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Response;
+
 
 Route::get('/personal-foto/{path}', function ($path) {
     // Verificamos si el archivo existe en el disco local

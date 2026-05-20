@@ -7,6 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
 use App\Models\Mobiliario;
 use App\Models\Personal;
+use App\Models\Debaja; 
 use Illuminate\Support\Facades\Storage;
 
 class Inventariomobi extends Component
@@ -15,7 +16,8 @@ class Inventariomobi extends Component
 
     #[Layout('layouts.app')]
 
-    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina principal', $personal_id, $mueble_id;
+    // Valores iniciales respetando las mayúsculas de tu migración
+    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina Principal', $personal_id, $mueble_id;
     public $imagen; 
     public $imagen_actual; 
     public $search = '';
@@ -27,7 +29,8 @@ class Inventariomobi extends Component
             'nombre' => 'required|min:3',
             'material' => 'required',
             'color' => 'required',
-            'estado' => 'required',
+            // Validación exacta para tu ENUM de base de datos
+            'estado' => 'required|in:Bueno,Regular,A la basura',
             'lugar' => 'required',
             'personal_id' => 'nullable|exists:personal,id',
             'imagen' => 'nullable|image|max:2048',
@@ -76,33 +79,64 @@ class Inventariomobi extends Component
     {
         $this->validate();
 
-        $datos = [
-            'nombre' => $this->nombre,
-            'material' => $this->material,
-            'color' => $this->color,
-            'estado' => $this->estado,
-            'lugar' => $this->lugar,
-            'personal_id' => $this->personal_id ?: null,
-        ];
+        // --- CASO A: EL ARTÍCULO SE DA DE BAJA ---
+        if ($this->estado === 'A la basura') {
+            
+            $rutaImagen = $this->imagen_actual;
+            if ($this->imagen) {
+                // Si sube imagen nueva, se guarda en disco local
+                $rutaImagen = $this->imagen->store('mobiliarios', 'local');
+            }
 
-        if ($this->imagen) {
-            // Eliminar imagen anterior del disco 'local'
+            Debaja::create([
+                'nombre'          => $this->nombre,
+                'tipo_inventario' => 'Mobiliario',
+                'motivo'          => 'A la basura',
+                'fecha_baja'      => now(),
+                'personal_id'     => $this->personal_id ?: null,
+                'imagen'          => $rutaImagen,
+                'detalles'        => [
+                    'material' => $this->material,
+                    'color'    => $this->color,
+                    'lugar'    => $this->lugar,
+                ],
+            ]);
+
+            // Si el mueble existía en la tabla activa, se elimina
             if ($this->mueble_id) {
-                $muebleAnterior = Mobiliario::find($this->mueble_id);
-                if ($muebleAnterior && $muebleAnterior->imagen) {
-                    Storage::disk('local')->delete($muebleAnterior->imagen);
+                $muebleActivo = Mobiliario::find($this->mueble_id);
+                if ($muebleActivo) {
+                    $muebleActivo->delete();
                 }
             }
-            // Guardar en disco 'local' (storage/app/mobiliarios)
-            $datos['imagen'] = $this->imagen->store('mobiliarios', 'local');
+
+            $msg = 'Artículo movido al historial de bajas correctamente.';
+
+        } else {
+            // --- CASO B: GUARDADO O ACTUALIZACIÓN NORMAL ---
+            $datos = [
+                'nombre'      => $this->nombre,
+                'material'    => $this->material,
+                'color'       => $this->color,
+                'estado'      => $this->estado,
+                'lugar'       => $this->lugar,
+                'personal_id' => $this->personal_id ?: null,
+            ];
+
+            if ($this->imagen) {
+                // Borrar imagen anterior del disco local si existe
+                if ($this->mueble_id && $this->imagen_actual) {
+                    Storage::disk('local')->delete($this->imagen_actual);
+                }
+                $datos['imagen'] = $this->imagen->store('mobiliarios', 'local');
+            }
+
+            Mobiliario::updateOrCreate(['id' => $this->mueble_id], $datos);
+            
+            $msg = $this->mueble_id ? 'Mueble actualizado correctamente' : 'Mueble registrado con éxito';
         }
 
-        Mobiliario::updateOrCreate(['id' => $this->mueble_id], $datos);
-
-        $this->dispatch('mueble-guardado', 
-            msg: $this->mueble_id ? 'Mueble actualizado correctamente' : 'Mueble registrado con éxito'
-        );
-
+        $this->dispatch('mueble-guardado', msg: $msg);
         $this->closeModal();
         $this->resetInputFields();
     }
@@ -111,13 +145,16 @@ class Inventariomobi extends Component
     {
         $mueble = Mobiliario::find($id);
         
-        // Borrar del disco 'local'
-        if ($mueble->imagen) {
+        // Borrar archivo físico del disco local
+        if ($mueble && $mueble->imagen) {
             Storage::disk('local')->delete($mueble->imagen);
         }
 
-        $mueble->delete();
-        $this->dispatch('mueble-guardado', msg: 'Mueble eliminado correctamente');
+        if ($mueble) {
+            $mueble->delete();
+        }
+
+        $this->dispatch('mueble-guardado', msg: 'Mueble eliminado permanentemente');
     }
 
     public function openModal() { $this->isOpen = true; }
@@ -128,9 +165,14 @@ class Inventariomobi extends Component
     }
 
     private function resetInputFields() {
-        $this->nombre = ''; $this->material = ''; $this->color = '';
-        $this->estado = 'Bueno'; $this->lugar = 'Oficina principal';
-        $this->personal_id = ''; $this->mueble_id = '';
-        $this->imagen = null; $this->imagen_actual = null;
+        $this->nombre = ''; 
+        $this->material = ''; 
+        $this->color = '';
+        $this->estado = 'Bueno'; 
+        $this->lugar = 'Oficina Principal'; // Coincide con el Enum de tu migración
+        $this->personal_id = ''; 
+        $this->mueble_id = '';
+        $this->imagen = null; 
+        $this->imagen_actual = null;
     }
 }

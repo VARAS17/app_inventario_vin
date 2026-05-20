@@ -17,64 +17,95 @@
         <aside class="flex flex-col w-56 min-h-screen bg-white border-r border-gray-200 fixed top-0 left-0 z-50">
 
             {{-- Logo --}}
-            <div class="flex items-center gap-3 px-4 py-5 border-b border-gray-200">
-                <div class="w-9 h-9 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
-                    <span class="text-white font-bold text-sm">{{ substr(config('app.name', 'L'), 0, 1) }}</span>
+            <div class="flex flex-col items-center gap-3 px-4 py-6 border-b border-gray-200">
+                <!-- Contenedor de la imagen (Aumentado de w-10 a w-24) -->
+                <div class="w-24 h-24 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    <img src="{{ asset('logovice.jpg') }}" 
+                        alt="Logo Vicerrectorado" 
+                        class="w-full h-full object-contain">
                 </div>
-                <span class="font-semibold text-gray-800 text-sm">{{ config('app.name', 'Laravel') }}</span>
+                
+                <!-- Texto del nombre (Centrado debajo del logo) -->
+                <div class="text-center">
+                    <span class="block font-bold text-gray-900 text-base leading-tight uppercase tracking-tight">
+                        Inventario
+                    </span>
+                    <span class="block text-gray-500 font-medium text-xs uppercase tracking-widest mt-0.5">
+                        Vicerrectorado de Investigacion
+                    </span>
+                </div>
             </div>
 
             {{-- Navegación --}}
             <nav class="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
                 <p class="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-widest">General</p>
 
+                {{-- DASHBOARD: Icono de Casa/Inicio --}}
                 <a href="{{ route('dashboard') }}"
-                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                          {{ request()->routeIs('dashboard') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('dashboard') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                     </svg>
                     Dashboard
                 </a>
-                <a href="{{ route('inventariotec') }}"
-                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                          {{ request()->routeIs('inventariotec') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                    </svg>
-                    INVENTARIOTEC
-                </a>
-            
+
+                {{-- PERSONAL: Icono de Usuarios/Grupo --}}
                 <a href="{{ route('personal') }}"
-                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                          {{ request()->routeIs('personal') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('personal') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                     </svg>
                     PERSONAL
                 </a>
-                <a href="{{ route('inventariomobi') }}"
-                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                          {{ request()->routeIs('inventariomobi') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                
+                {{-- INVENTARIOTEC: Icono de Computadora/Monitor --}}
+                <a href="{{ route('inventariotec') }}"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('inventariotec') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    INVENTARIOTEC
+                </a>
+
+                {{-- INVENTARIOMOBI: Icono de Archivador/Mobiliario --}}
+                <a href="{{ route('inventariomobi') }}"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('inventariomobi') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     INVENTARIOMOBI
                 </a>
+
+                {{-- INVENTARIOUTIL: Icono de Portapapeles/Útiles --}}
                 <a href="{{ route('inventarioutil') }}"
-                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                          {{ request()->routeIs('inventarioutil') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('inventarioutil') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                     </svg>
                     INVENTARIOUTIL
                 </a>
-                
+
+                <!-- ITEMS QUE SON DADOS DE BAJA (MALOGRADOS, A LA BASURA) -->
+                <a href="{{ route('debaja') }}"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                        {{ request()->routeIs('debaja') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                    </svg>
+                    DADO DE BAJA
+                </a>
+                            
             </nav>
 
             {{-- Footer: usuario + menú (sin Alpine, usa JS puro) --}}

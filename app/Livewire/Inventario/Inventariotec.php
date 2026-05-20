@@ -4,30 +4,41 @@ namespace App\Livewire\Inventario;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\WithFileUploads;
 use App\Models\Tecnologia;
-use App\Models\Personal; // Cambiado de User a Personal
+use App\Models\Personal;
+use App\Models\Debaja; // Importar el modelo de Bajas
+use Illuminate\Support\Facades\Storage;
 
 class Inventariotec extends Component
 {
+    use WithFileUploads;
+
     #[Layout('layouts.app')]
 
-    // Propiedades del componente
-    // Cambiamos user_id por personal_id para ser consistentes con la DB
-    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina principal', $personal_id, $equipo_id;
+    // Propiedades
+    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina Principal', $personal_id, $equipo_id;
+    public $imagen; 
+    public $imagen_actual; 
     public $search = ''; 
     public $isOpen = false;
 
-    protected $rules = [
-        'nombre' => 'required|min:3',
-        'marca' => 'required',
-        'estado' => 'required',
-        'lugar' => 'required|in:Oficina principal,Sala de Reuniones,Oficina de comunicaciones,Almacen,Cocina',
-        'personal_id' => 'nullable|exists:personal,id', // Validación para asegurar que el ID existe
-    ];
+    // Reglas de validación
+    protected function rules()
+    {
+        return [
+            'nombre' => 'required|min:3',
+            'marca' => 'required',
+            'serie' => 'nullable',
+            'estado' => 'required|in:En funcionamiento,Guardado,Malogrado', // Los 3 estados que pediste
+            'lugar' => 'required',
+            'personal_id' => 'nullable|exists:personal,id',
+            'imagen' => 'nullable|image|max:2048',
+        ];
+    }
 
     public function render()
     {
-        // Cargamos la relación 'personal' definida en el modelo Tecnologia
         $equipos = Tecnologia::with('personal')
             ->where(function($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
@@ -40,7 +51,7 @@ class Inventariotec extends Component
 
         return view('livewire.inventario.inventariotec', [
             'equipos' => $equipos,
-            'personales' => Personal::all() // Enviamos la lista de personal a la vista
+            'personales' => Personal::all()
         ]);
     }
 
@@ -59,7 +70,8 @@ class Inventariotec extends Component
         $this->serie = $equipo->serie;
         $this->estado = $equipo->estado;
         $this->lugar = $equipo->lugar; 
-        $this->personal_id = $equipo->personal_id; // Cambiado
+        $this->personal_id = $equipo->personal_id;
+        $this->imagen_actual = $equipo->imagen; 
 
         $this->openModal();
     }
@@ -68,37 +80,101 @@ class Inventariotec extends Component
     {
         $this->validate();
 
-        Tecnologia::updateOrCreate(['id' => $this->equipo_id], [
-            'nombre' => $this->nombre,
-            'marca' => $this->marca,
-            'serie' => $this->serie,
-            'estado' => $this->estado,
-            'lugar' => $this->lugar, 
-            'personal_id' => $this->personal_id ?: null, // Cambiado
-        ]);
+        // --- CASO 1: EL EQUIPO ESTÁ MALOGRADO (SE MUEVE AL TACHO) ---
+        if ($this->estado === 'Malogrado') {
+            
+            $rutaImagen = $this->imagen_actual;
+            if ($this->imagen) {
+                // Guardar en disco local para app escritorio
+                $rutaImagen = $this->imagen->store('tecnologia', 'local');
+            }
 
-        session()->flash('message', $this->equipo_id ? 'Equipo actualizado.' : 'Equipo creado.');
+            Debaja::create([
+                'nombre'          => $this->nombre,
+                'tipo_inventario' => 'Tecnología',
+                'motivo'          => 'Malogrado',
+                'fecha_baja'      => now(),
+                'personal_id'     => $this->personal_id ?: null,
+                'imagen'          => $rutaImagen,
+                'detalles'        => [
+                    'marca' => $this->marca,
+                    'serie' => $this->serie,
+                    'lugar' => $this->lugar,
+                ],
+            ]);
 
+            // Si el equipo existía en la tabla de tecnología, lo eliminamos
+            if ($this->equipo_id) {
+                $equipoActivo = Tecnologia::find($this->equipo_id);
+                if ($equipoActivo) {
+                    $equipoActivo->delete();
+                }
+            }
+
+            $msg = 'Equipo tecnológico movido al historial de bajas.';
+
+        } else {
+            // --- CASO 2: GUARDADO NORMAL (EN FUNCIONAMIENTO O GUARDADO) ---
+            $datos = [
+                'nombre'      => $this->nombre,
+                'marca'       => $this->marca,
+                'serie'       => $this->serie,
+                'estado'      => $this->estado, // Aquí se guarda "En funcionamiento" o "Guardado"
+                'lugar'       => $this->lugar,
+                'personal_id' => $this->personal_id ?: null,
+            ];
+
+            if ($this->imagen) {
+                // Borrar imagen anterior del disco local si existe una nueva
+                if ($this->equipo_id && $this->imagen_actual) {
+                    Storage::disk('local')->delete($this->imagen_actual);
+                }
+                $datos['imagen'] = $this->imagen->store('tecnologia', 'local');
+            }
+
+            Tecnologia::updateOrCreate(['id' => $this->equipo_id], $datos);
+            
+            $msg = $this->equipo_id ? 'Equipo actualizado correctamente' : 'Equipo registrado con éxito';
+        }
+
+        // Despachar alerta (usamos el mismo evento que Mobiliario para ahorrar código JS)
+        $this->dispatch('mueble-guardado', msg: $msg);
         $this->closeModal();
         $this->resetInputFields();
     }
 
     public function eliminar($id)
     {
-        Tecnologia::find($id)->delete();
-        session()->flash('message', 'Equipo eliminado.');
+        $equipo = Tecnologia::find($id);
+        
+        // Borrar imagen física
+        if ($equipo && $equipo->imagen) {
+            Storage::disk('local')->delete($equipo->imagen);
+        }
+
+        if ($equipo) {
+            $equipo->delete();
+        }
+
+        $this->dispatch('mueble-guardado', msg: 'Equipo eliminado permanentemente');
     }
 
     public function openModal() { $this->isOpen = true; }
-    public function closeModal() { $this->isOpen = false; }
+    
+    public function closeModal() { 
+        $this->isOpen = false; 
+        $this->resetInputFields();
+    }
 
     private function resetInputFields() {
         $this->nombre = ''; 
         $this->marca = ''; 
         $this->serie = '';
         $this->estado = 'En funcionamiento'; 
-        $this->lugar = 'Oficina principal'; 
-        $this->personal_id = ''; // Cambiado
+        $this->lugar = 'Oficina Principal'; 
+        $this->personal_id = ''; 
         $this->equipo_id = '';
+        $this->imagen = null;
+        $this->imagen_actual = null;
     }
 }
