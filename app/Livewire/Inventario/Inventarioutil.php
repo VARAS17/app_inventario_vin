@@ -5,18 +5,30 @@ namespace App\Livewire\Inventario;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use App\Models\Util;
+use App\Models\MovimientoUtil;
+use Illuminate\Support\Facades\DB;
 
 class Inventarioutil extends Component
 {
-    // Aplicamos el layout de Breeze/Jetstream
     #[Layout('layouts.app')]
 
-    // Propiedades del formulario
+    // Propiedades CRUD (Crear/Editar)
     public $nombre, $cantidad, $unidad = 'Unidad', $util_id;
-    public $search = '';
-    public $isOpen = false; // Control del modal
+    public $descripcion = ''; 
 
-    // Reglas de validación
+    // Propiedades para el flujo de Movimiento Rápido (NUEVO)
+    public $isOpenMovimiento = false;
+    public $tipoMovimiento = ''; // 'Ingreso' o 'Egreso'
+    public $cantidadMovimiento;
+    public $descripcionMovimiento = '';
+    public $articuloSeleccionado; // Para mostrar info en el modal
+
+    // Propiedades de búsqueda e Historial
+    public $search = '';
+    public $isOpen = false;        
+    public $isHistoryOpen = false; 
+    public $historial = [];        
+
     protected $rules = [
         'nombre' => 'required|min:3',
         'cantidad' => 'required|numeric|min:0',
@@ -29,11 +41,85 @@ class Inventarioutil extends Component
             ->latest()
             ->get();
 
-        // IMPORTANTE: La vista ahora está en livewire.inventario.inventarioutil
         return view('livewire.inventario.inventarioutil', [
             'utiles' => $utiles
         ]);
     }
+
+    // --- FLUJO DE MOVIMIENTO RÁPIDO (INGRESO / EGRESO) ---
+
+    public function abrirModalMovimiento($id)
+    {
+        $this->articuloSeleccionado = Util::findOrFail($id);
+        $this->tipoMovimiento = ''; // Forzamos a elegir uno
+        $this->cantidadMovimiento = null;
+        $this->descripcionMovimiento = '';
+        $this->isOpenMovimiento = true;
+    }
+
+    public function procesarMovimiento()
+    {
+        // Validaciones básicas
+        $this->validate([
+            'tipoMovimiento' => 'required|in:Ingreso,Egreso',
+            'cantidadMovimiento' => 'required|numeric|min:1',
+            'descripcionMovimiento' => 'required|min:3',
+        ], [
+            'tipoMovimiento.required' => 'Debe seleccionar Ingreso o Egreso.',
+            'descripcionMovimiento.required' => 'Debe indicar un motivo para el historial.'
+        ]);
+
+        // Validación de Stock (No permitir egresos mayores al stock actual)
+        if ($this->tipoMovimiento === 'Egreso' && $this->cantidadMovimiento > $this->articuloSeleccionado->cantidad) {
+            $this->addError('cantidadMovimiento', 'No hay suficiente stock. Stock actual: ' . $this->articuloSeleccionado->cantidad);
+            return;
+        }
+
+        DB::transaction(function () {
+            // 1. Actualizar el stock en la tabla principal
+            if ($this->tipoMovimiento === 'Ingreso') {
+                $this->articuloSeleccionado->increment('cantidad', $this->cantidadMovimiento);
+            } else {
+                $this->articuloSeleccionado->decrement('cantidad', $this->cantidadMovimiento);
+            }
+
+            // 2. Registrar el movimiento en el historial
+            $this->articuloSeleccionado->movimientos()->create([
+                'tipo' => $this->tipoMovimiento,
+                'cantidad' => $this->cantidadMovimiento,
+                'descripcion' => $this->descripcionMovimiento,
+                'fecha' => now(),
+            ]);
+        });
+
+        session()->flash('message', 'Stock actualizado correctamente.');
+        $this->closeMovimientoModal();
+    }
+
+    public function closeMovimientoModal()
+    {
+        $this->isOpenMovimiento = false;
+        $this->reset(['tipoMovimiento', 'cantidadMovimiento', 'descripcionMovimiento', 'articuloSeleccionado']);
+    }
+
+
+    // --- MÉTODOS DE HISTORIAL ---
+
+    public function verHistorial($id)
+    {
+        $util = Util::findOrFail($id);
+        $this->historial = $util->movimientos()->orderBy('created_at', 'desc')->get();
+        $this->isHistoryOpen = true;
+    }
+
+    public function closeHistoryModal()
+    {
+        $this->isHistoryOpen = false;
+        $this->historial = [];
+    }
+
+
+    // --- MÉTODOS DE CRUD TRADICIONAL ---
 
     public function crear()
     {
@@ -48,7 +134,7 @@ class Inventarioutil extends Component
         $this->nombre = $articulo->nombre;
         $this->cantidad = $articulo->cantidad;
         $this->unidad = $articulo->unidad;
-
+        $this->descripcion = ''; 
         $this->openModal();
     }
 
@@ -56,18 +142,44 @@ class Inventarioutil extends Component
     {
         $this->validate();
 
-        // Si util_id existe, actualiza; si no, crea.
-        Util::updateOrCreate(['id' => $this->util_id], [
-            'nombre' => $this->nombre,
-            'cantidad' => $this->cantidad,
-            'unidad' => $this->unidad,
-        ]);
+        DB::transaction(function () {
+            if ($this->util_id) {
+                $util = Util::find($this->util_id);
+                $cantidadAnterior = $util->cantidad;
+                $diferencia = $this->cantidad - $cantidadAnterior;
 
-        session()->flash('message', 
-            $this->util_id ? 'Artículo actualizado con éxito.' : 'Artículo agregado al inventario.');
+                $util->update([
+                    'nombre' => $this->nombre,
+                    'cantidad' => $this->cantidad,
+                    'unidad' => $this->unidad,
+                ]);
 
+                if ($diferencia != 0) {
+                    $util->movimientos()->create([
+                        'tipo' => $diferencia > 0 ? 'Ingreso' : 'Egreso',
+                        'cantidad' => abs($diferencia),
+                        'descripcion' => $this->descripcion ?: 'Actualización manual de nombre/unidad',
+                        'fecha' => now(),
+                    ]);
+                }
+            } else {
+                $util = Util::create([
+                    'nombre' => $this->nombre,
+                    'cantidad' => $this->cantidad,
+                    'unidad' => $this->unidad,
+                ]);
+
+                $util->movimientos()->create([
+                    'tipo' => 'Ingreso',
+                    'cantidad' => $this->cantidad,
+                    'descripcion' => $this->descripcion ?: 'Registro inicial',
+                    'fecha' => now(),
+                ]);
+            }
+        });
+
+        session()->flash('message', $this->util_id ? 'Artículo actualizado.' : 'Artículo agregado.');
         $this->closeModal();
-        $this->resetInputFields();
     }
 
     public function eliminar($id)
@@ -77,13 +189,19 @@ class Inventarioutil extends Component
     }
 
     public function openModal() { $this->isOpen = true; }
-    public function closeModal() { $this->isOpen = false; }
+    
+    public function closeModal() 
+    { 
+        $this->isOpen = false; 
+        $this->resetInputFields();
+    }
 
     private function resetInputFields()
     {
         $this->nombre = '';
         $this->cantidad = '';
         $this->unidad = 'Unidad';
+        $this->descripcion = '';
         $this->util_id = '';
     }
 }

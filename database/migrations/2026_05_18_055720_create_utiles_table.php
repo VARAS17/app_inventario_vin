@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nombre'); // Ej: Hojas Bond, Lapiceros
             $table->integer('cantidad'); // Solicitado: cantidad
             // Unidad solicitada: cajas o unidad
-            $table->enum('unidad', ['Cajas', 'Unidad'])->default('Unidad');
+            $table->enum('unidad', ['Cajas', 'Paquetes', 'Unidad'])->default('Unidad');
             
             $table->timestamps();
         });

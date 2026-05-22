@@ -3,20 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+// Importamos el modelo del historial (opcional si están en el mismo namespace)
+use App\Models\MovimientoUtil; 
 
 class Util extends Model
 {
-    /**
-     * Nombre de la tabla (Correcto: Laravel por defecto buscaría 'utils')
-     */
     protected $table = 'utiles';
 
-    /**
-     * Campos permitidos para asignación masiva.
-     */
     protected $fillable = [
         'nombre',
         'cantidad',
         'unidad',
     ];
+
+    /**
+     * Relación: Un útil tiene muchos movimientos (historial).
+     */
+    public function movimientos()
+    {
+        // 'util_id' es la FK que definimos en la migración del historial
+        return $this->hasMany(MovimientoUtil::class, 'util_id');
+    }
 }
