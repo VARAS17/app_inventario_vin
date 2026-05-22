@@ -12,6 +12,7 @@ class Util extends Model
 
     protected $fillable = [
         'nombre',
+        'marca',
         'cantidad',
         'unidad',
     ];

@@ -12,16 +12,16 @@ class Inventarioutil extends Component
 {
     #[Layout('layouts.app')]
 
-    // Propiedades CRUD (Crear/Editar)
-    public $nombre, $cantidad, $unidad = 'Unidad', $util_id;
+    // Propiedades CRUD (Se agregó $marca)
+    public $nombre, $cantidad, $marca, $unidad = 'Unidad', $util_id;
     public $descripcion = ''; 
 
-    // Propiedades para el flujo de Movimiento Rápido (NUEVO)
+    // Propiedades para el flujo de Movimiento Rápido
     public $isOpenMovimiento = false;
-    public $tipoMovimiento = ''; // 'Ingreso' o 'Egreso'
+    public $tipoMovimiento = ''; 
     public $cantidadMovimiento;
     public $descripcionMovimiento = '';
-    public $articuloSeleccionado; // Para mostrar info en el modal
+    public $articuloSeleccionado; 
 
     // Propiedades de búsqueda e Historial
     public $search = '';
@@ -29,15 +29,19 @@ class Inventarioutil extends Component
     public $isHistoryOpen = false; 
     public $historial = [];        
 
+    // Reglas de validación actualizadas
     protected $rules = [
         'nombre' => 'required|min:3',
+        'marca' => 'required|min:2', // Nueva regla
         'cantidad' => 'required|numeric|min:0',
         'unidad' => 'required',
     ];
 
     public function render()
     {
+        // Se actualizó la búsqueda para incluir también la marca si se desea
         $utiles = Util::where('nombre', 'like', '%' . $this->search . '%')
+            ->orWhere('marca', 'like', '%' . $this->search . '%')
             ->latest()
             ->get();
 
@@ -46,12 +50,11 @@ class Inventarioutil extends Component
         ]);
     }
 
-    // --- FLUJO DE MOVIMIENTO RÁPIDO (INGRESO / EGRESO) ---
-
+    // --- FLUJO DE MOVIMIENTO RÁPIDO ---
     public function abrirModalMovimiento($id)
     {
         $this->articuloSeleccionado = Util::findOrFail($id);
-        $this->tipoMovimiento = ''; // Forzamos a elegir uno
+        $this->tipoMovimiento = ''; 
         $this->cantidadMovimiento = null;
         $this->descripcionMovimiento = '';
         $this->isOpenMovimiento = true;
@@ -59,7 +62,6 @@ class Inventarioutil extends Component
 
     public function procesarMovimiento()
     {
-        // Validaciones básicas
         $this->validate([
             'tipoMovimiento' => 'required|in:Ingreso,Egreso',
             'cantidadMovimiento' => 'required|numeric|min:1',
@@ -69,21 +71,18 @@ class Inventarioutil extends Component
             'descripcionMovimiento.required' => 'Debe indicar un motivo para el historial.'
         ]);
 
-        // Validación de Stock (No permitir egresos mayores al stock actual)
         if ($this->tipoMovimiento === 'Egreso' && $this->cantidadMovimiento > $this->articuloSeleccionado->cantidad) {
             $this->addError('cantidadMovimiento', 'No hay suficiente stock. Stock actual: ' . $this->articuloSeleccionado->cantidad);
             return;
         }
 
         DB::transaction(function () {
-            // 1. Actualizar el stock en la tabla principal
             if ($this->tipoMovimiento === 'Ingreso') {
                 $this->articuloSeleccionado->increment('cantidad', $this->cantidadMovimiento);
             } else {
                 $this->articuloSeleccionado->decrement('cantidad', $this->cantidadMovimiento);
             }
 
-            // 2. Registrar el movimiento en el historial
             $this->articuloSeleccionado->movimientos()->create([
                 'tipo' => $this->tipoMovimiento,
                 'cantidad' => $this->cantidadMovimiento,
@@ -102,9 +101,7 @@ class Inventarioutil extends Component
         $this->reset(['tipoMovimiento', 'cantidadMovimiento', 'descripcionMovimiento', 'articuloSeleccionado']);
     }
 
-
     // --- MÉTODOS DE HISTORIAL ---
-
     public function verHistorial($id)
     {
         $util = Util::findOrFail($id);
@@ -118,9 +115,7 @@ class Inventarioutil extends Component
         $this->historial = [];
     }
 
-
     // --- MÉTODOS DE CRUD TRADICIONAL ---
-
     public function crear()
     {
         $this->resetInputFields();
@@ -132,6 +127,7 @@ class Inventarioutil extends Component
         $articulo = Util::findOrFail($id);
         $this->util_id = $id;
         $this->nombre = $articulo->nombre;
+        $this->marca = $articulo->marca; // Cargar marca
         $this->cantidad = $articulo->cantidad;
         $this->unidad = $articulo->unidad;
         $this->descripcion = ''; 
@@ -150,6 +146,7 @@ class Inventarioutil extends Component
 
                 $util->update([
                     'nombre' => $this->nombre,
+                    'marca' => $this->marca, // Guardar marca
                     'cantidad' => $this->cantidad,
                     'unidad' => $this->unidad,
                 ]);
@@ -158,13 +155,14 @@ class Inventarioutil extends Component
                     $util->movimientos()->create([
                         'tipo' => $diferencia > 0 ? 'Ingreso' : 'Egreso',
                         'cantidad' => abs($diferencia),
-                        'descripcion' => $this->descripcion ?: 'Actualización manual de nombre/unidad',
+                        'descripcion' => $this->descripcion ?: 'Actualización manual de datos',
                         'fecha' => now(),
                     ]);
                 }
             } else {
                 $util = Util::create([
                     'nombre' => $this->nombre,
+                    'marca' => $this->marca, // Guardar marca
                     'cantidad' => $this->cantidad,
                     'unidad' => $this->unidad,
                 ]);
@@ -199,9 +197,67 @@ class Inventarioutil extends Component
     private function resetInputFields()
     {
         $this->nombre = '';
+        $this->marca = ''; // Resetear marca
         $this->cantidad = '';
         $this->unidad = 'Unidad';
         $this->descripcion = '';
         $this->util_id = '';
+    }
+
+    public function exportar()
+    {
+        $utiles = \App\Models\Util::with('movimientos')
+            ->where('nombre', 'like', '%' . $this->search . '%')
+            ->orWhere('marca', 'like', '%' . $this->search . '%')
+            ->latest()
+            ->get();
+
+        $filename = 'inventario_utiles.csv';
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($utiles) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+
+            // ── SECCIÓN 1: STOCK ACTUAL ──
+            fputcsv($file, ['=== STOCK ACTUAL ==='], ';');
+            fputcsv($file, ['Nombre', 'Marca', 'Cantidad', 'Unidad'], ';');
+
+            foreach ($utiles as $util) {
+                fputcsv($file, [
+                    $util->nombre,
+                    $util->marca,
+                    $util->cantidad,
+                    $util->unidad,
+                ], ';');
+            }
+
+            // Fila vacía separadora
+            fputcsv($file, [], ';');
+
+            // ── SECCIÓN 2: HISTORIAL DE MOVIMIENTOS ──
+            fputcsv($file, ['=== HISTORIAL DE MOVIMIENTOS ==='], ';');
+            fputcsv($file, ['Artículo', 'Marca', 'Tipo', 'Cantidad', 'Motivo', 'Fecha'], ';');
+
+            foreach ($utiles as $util) {
+                foreach ($util->movimientos as $mov) {
+                    fputcsv($file, [
+                        $util->nombre,
+                        $util->marca,
+                        $mov->tipo,
+                        $mov->cantidad,
+                        $mov->descripcion,
+                        $mov->fecha ?? $mov->created_at,
+                    ], ';');
+                }
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

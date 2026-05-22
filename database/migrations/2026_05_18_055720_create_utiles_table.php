@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nombre'); // Ej: Hojas Bond, Lapiceros
             $table->integer('cantidad'); // Solicitado: cantidad
+            $table->string('marca'); //nuevo campo
             // Unidad solicitada: cajas o unidad
             $table->enum('unidad', ['Cajas', 'Paquetes', 'Unidad'])->default('Unidad');
             

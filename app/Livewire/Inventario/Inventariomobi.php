@@ -175,4 +175,43 @@ class Inventariomobi extends Component
         $this->imagen = null; 
         $this->imagen_actual = null;
     }
+
+    public function exportar()
+{
+    $muebles = \App\Models\Mobiliario::with('personal')
+        ->where(function($query) {
+            $query->where('nombre', 'like', '%' . $this->search . '%')
+                  ->orWhere('material', 'like', '%' . $this->search . '%')
+                  ->orWhere('lugar', 'like', '%' . $this->search . '%');
+        })
+        ->get();
+
+    $filename = 'inventario_mobiliario.csv';
+    $headers = [
+        'Content-Type'        => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+
+    $callback = function() use ($muebles) {
+        $file = fopen('php://output', 'w');
+        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+        fputcsv($file, ['Nombre', 'Material', 'Color', 'Estado', 'Lugar', 'Asignado a'], ';');
+
+        foreach ($muebles as $mueble) {
+            fputcsv($file, [
+                $mueble->nombre,
+                $mueble->material,
+                $mueble->color,
+                $mueble->estado,
+                $mueble->lugar,
+                $mueble->personal
+                    ? $mueble->personal->nombre . ' ' . $mueble->personal->apellido
+                    : 'Sin asignar',
+            ], ';');
+        }
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
 }

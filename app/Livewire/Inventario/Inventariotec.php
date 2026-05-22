@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Inventario;
 
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
@@ -177,4 +180,45 @@ class Inventariotec extends Component
         $this->imagen = null;
         $this->imagen_actual = null;
     }
+
+
+public function exportar()
+{
+    $equipos = \App\Models\Tecnologia::with('personal')
+        ->where(function($query) {
+            $query->where('nombre', 'like', '%' . $this->search . '%')
+                  ->orWhere('marca', 'like', '%' . $this->search . '%')
+                  ->orWhere('serie', 'like', '%' . $this->search . '%')
+                  ->orWhere('lugar', 'like', '%' . $this->search . '%');
+        })
+        ->get();
+
+    $filename = 'inventario_tecnologia.csv';
+    $headers = [
+        'Content-Type'        => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+
+    $callback = function() use ($equipos) {
+        $file = fopen('php://output', 'w');
+        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+        fputcsv($file, ['Nombre', 'Marca', 'Serie', 'Estado', 'Lugar', 'Asignado a'], ';');
+        
+        foreach ($equipos as $equipo) {
+            fputcsv($file, [
+                $equipo->nombre,
+                $equipo->marca,
+                $equipo->serie ?? 'S/N',
+                $equipo->estado,
+                $equipo->lugar,
+                $equipo->personal 
+                    ? $equipo->personal->nombre . ' ' . $equipo->personal->apellido 
+                    : 'Sin asignar',
+            ], ';');
+        }
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
 }
