@@ -193,7 +193,7 @@ public function exportar()
         })
         ->get();
 
-    $filename = 'inventario_tecnologia.csv';
+    $filename = 'reporte_inventario_tecno_' . date('Y-m-d_H-i-s') . '.csv';
     $headers = [
         'Content-Type'        => 'text/csv; charset=UTF-8',
         'Content-Disposition' => "attachment; filename=\"$filename\"",

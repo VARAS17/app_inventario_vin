@@ -20,5 +20,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@universidad.edu',
             'password' => Hash::make('admin123'), // Esta será tu contraseña
         ]);
+
+        $this->call([
+        PersonalSeeder::class,
+    ]);
     }
 }
