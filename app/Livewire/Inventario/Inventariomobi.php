@@ -169,7 +169,7 @@ class Inventariomobi extends Component
         $this->material = ''; 
         $this->color = '';
         $this->estado = 'Bueno'; 
-        $this->lugar = 'Oficina Principal'; // Coincide con el Enum de tu migración
+        $this->lugar = 'Oficina principal'; // Coincide con el Enum de tu migración
         $this->personal_id = ''; 
         $this->mueble_id = '';
         $this->imagen = null; 

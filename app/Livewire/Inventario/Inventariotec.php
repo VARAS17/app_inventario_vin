@@ -171,7 +171,7 @@ class Inventariotec extends Component
         $this->marca = ''; 
         $this->serie = '';
         $this->estado = 'En funcionamiento'; 
-        $this->lugar = 'Oficina Principal'; 
+        $this->lugar = 'Oficina principal'; 
         $this->personal_id = ''; 
         $this->equipo_id = '';
         $this->imagen = null;
