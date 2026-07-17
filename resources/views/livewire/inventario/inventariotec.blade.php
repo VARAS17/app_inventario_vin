@@ -4,10 +4,18 @@
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h1 class="text-2xl font-bold text-gray-800">Inventario Tecnológico</h1>
             
-            <div class="flex items-center gap-4 w-full md:w-auto">
-                <input type="text" wire:model.live="search" placeholder="Buscar equipo..." 
-                    class="border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-full md:w-64">
-                
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <!-- Buscador (Nombre, Marca, Serie) -->
+                <div class="relative w-full md:w-64">
+                    <input type="text" wire:model.live="search" placeholder="Buscar por nombre, marca..." 
+                        class="border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-full pl-10">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+
                 <button wire:click="exportar" 
                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition flex items-center shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -22,6 +30,30 @@
                     </svg>
                     Nuevo Equipo
                 </button>
+            </div>
+        </div>
+
+        <!-- Fila de Filtros Adicionales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1 italic">Filtrar por Responsable</label>
+                <select wire:model.live="filterPersonal" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 text-sm">
+                    <option value="">Todos los usuarios</option>
+                    @foreach($personales as $persona)
+                        <option value="{{ $persona->id }}">{{ $persona->nombre }} {{ $persona->apellido }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1 italic">Filtrar por Lugar</label>
+                <select wire:model.live="filterLugar" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 text-sm">
+                    <option value="">Todos los lugares</option>
+                    <option value="Oficina principal">Oficina principal</option>
+                    <option value="Sala de Reuniones">Sala de Reuniones</option>
+                    <option value="Oficina de comunicaciones">Oficina de comunicaciones</option>
+                    <option value="Almacen">Almacen</option>
+                    <option value="Cocina">Cocina</option>
+                </select>
             </div>
         </div>
 
@@ -44,9 +76,8 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @foreach($equipos as $equipo)
+                    @forelse($equipos as $equipo)
                     <tr wire:key="equipo-{{ $equipo->id }}" class="hover:bg-blue-50/30 transition">
-                        <!-- Columna 1: Equipo / Responsable -->
                         <td class="px-6 py-4">
                             <div class="text-lg font-bold text-gray-900 leading-tight">{{ $equipo->nombre }}</div>
                             <div class="text-sm text-blue-600 font-medium italic">
@@ -54,20 +85,17 @@
                             </div>
                         </td>
 
-                        <!-- Columna 2: Marca / Serie -->
                         <td class="px-6 py-4">
                             <div class="text-lg font-semibold text-gray-800">{{ $equipo->marca }}</div>
                             <div class="text-sm text-gray-500 italic">S/N: {{ $equipo->serie ?? 'N/A' }}</div>
                         </td>
 
-                        <!-- Columna 3: Lugar -->
                         <td class="px-6 py-4">
                             <div class="flex items-center text-gray-600 font-medium">
                                 <span class="mr-1">📍</span> {{ $equipo->lugar }}
                             </div>
                         </td>
 
-                        <!-- Columna 4: Estado -->
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 text-xs font-bold rounded-full 
                                 {{ $equipo->estado == 'En funcionamiento' ? 'bg-green-100 text-green-700' : 
@@ -76,7 +104,6 @@
                             </span>
                         </td>
 
-                        <!-- Columna 5: Acciones -->
                         <td class="px-6 py-4 text-center">
                             <div class="flex justify-center gap-2">
                                 <button wire:click="editar({{ $equipo->id }})" class="p-2 text-blue-500 hover:bg-blue-100 rounded-lg transition" title="Editar">
@@ -92,7 +119,13 @@
                             </div>
                         </td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
+                            No se encontraron equipos con los filtros seleccionados.
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -112,6 +145,7 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 italic">Nombre del Equipo</label>
                         <input type="text" wire:model="nombre" class="w-full mt-1 border-gray-300 rounded-lg focus:ring-blue-500">
+                        @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
