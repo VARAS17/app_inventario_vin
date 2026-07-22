@@ -5,6 +5,7 @@ namespace App\Livewire\Inventario;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination; // Importante para paginación
 use App\Models\Mobiliario;
 use App\Models\Personal;
 use App\Models\Debaja; 
@@ -13,15 +14,26 @@ use Illuminate\Support\Facades\Storage;
 class Inventariomobi extends Component
 {
     use WithFileUploads;
+    use WithPagination; // Habilitar paginación
 
     #[Layout('layouts.app')]
 
-    // Valores iniciales respetando las mayúsculas de tu migración
-    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina Principal', $personal_id, $mueble_id;
+    // Propiedades del formulario
+    public $nombre, $material, $color, $estado = 'Bueno', $lugar = 'Oficina principal', $personal_id, $mueble_id;
     public $imagen; 
     public $imagen_actual; 
+    
+    // Propiedades de búsqueda y filtros
     public $search = '';
+    public $filtroLugar = '';
+    public $filtroPersonal = '';
+    
     public $isOpen = false;
+
+    // Resetear paginación cuando cambian los filtros
+    public function updatingSearch() { $this->resetPage(); }
+    public function updatingFiltroLugar() { $this->resetPage(); }
+    public function updatingFiltroPersonal() { $this->resetPage(); }
 
     protected function rules()
     {
@@ -29,7 +41,6 @@ class Inventariomobi extends Component
             'nombre' => 'required|min:3',
             'material' => 'required',
             'color' => 'required',
-            // Validación exacta para tu ENUM de base de datos
             'estado' => 'required|in:Bueno,Regular,A la basura',
             'lugar' => 'required',
             'personal_id' => 'nullable|exists:personal,id',
@@ -39,18 +50,34 @@ class Inventariomobi extends Component
 
     public function render()
     {
-        $muebles = Mobiliario::with('personal')
-            ->where(function($query) {
-                $query->where('nombre', 'like', '%' . $this->search . '%')
-                      ->orWhere('material', 'like', '%' . $this->search . '%')
-                      ->orWhere('lugar', 'like', '%' . $this->search . '%');
-            })
-            ->latest()
-            ->get();
+        // Consulta base con relaciones
+        $query = Mobiliario::with('personal');
+
+        // Filtro por búsqueda general (Nombre o Material)
+        if ($this->search) {
+            $query->where(function($q) {
+                $q->where('nombre', 'like', '%' . $this->search . '%')
+                  ->orWhere('material', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        // Filtro por Lugar
+        if ($this->filtroLugar) {
+            $query->where('lugar', $this->filtroLugar);
+        }
+
+        // Filtro por Encargado (Personal)
+        if ($this->filtroPersonal) {
+            $query->where('personal_id', $this->filtroPersonal);
+        }
+
+        // Obtener lista de lugares únicos para el select del filtro (opcional, o puedes hardcodearlos)
+        $lugaresDisponibles = Mobiliario::select('lugar')->distinct()->pluck('lugar');
 
         return view('livewire.inventario.inventariomobi', [
-            'muebles' => $muebles,
-            'personal_list' => Personal::all()
+            'muebles' => $query->latest()->paginate(10), // Paginación de 10
+            'personal_list' => Personal::all(),
+            'lugares_list' => $lugaresDisponibles
         ]);
     }
 
@@ -79,12 +106,9 @@ class Inventariomobi extends Component
     {
         $this->validate();
 
-        // --- CASO A: EL ARTÍCULO SE DA DE BAJA ---
         if ($this->estado === 'A la basura') {
-            
             $rutaImagen = $this->imagen_actual;
             if ($this->imagen) {
-                // Si sube imagen nueva, se guarda en disco local
                 $rutaImagen = $this->imagen->store('mobiliarios', 'local');
             }
 
@@ -102,18 +126,13 @@ class Inventariomobi extends Component
                 ],
             ]);
 
-            // Si el mueble existía en la tabla activa, se elimina
             if ($this->mueble_id) {
                 $muebleActivo = Mobiliario::find($this->mueble_id);
-                if ($muebleActivo) {
-                    $muebleActivo->delete();
-                }
+                if ($muebleActivo) { $muebleActivo->delete(); }
             }
 
             $msg = 'Artículo movido al historial de bajas correctamente.';
-
         } else {
-            // --- CASO B: GUARDADO O ACTUALIZACIÓN NORMAL ---
             $datos = [
                 'nombre'      => $this->nombre,
                 'material'    => $this->material,
@@ -124,7 +143,6 @@ class Inventariomobi extends Component
             ];
 
             if ($this->imagen) {
-                // Borrar imagen anterior del disco local si existe
                 if ($this->mueble_id && $this->imagen_actual) {
                     Storage::disk('local')->delete($this->imagen_actual);
                 }
@@ -132,7 +150,6 @@ class Inventariomobi extends Component
             }
 
             Mobiliario::updateOrCreate(['id' => $this->mueble_id], $datos);
-            
             $msg = $this->mueble_id ? 'Mueble actualizado correctamente' : 'Mueble registrado con éxito';
         }
 
@@ -144,16 +161,10 @@ class Inventariomobi extends Component
     public function eliminar($id)
     {
         $mueble = Mobiliario::find($id);
-        
-        // Borrar archivo físico del disco local
         if ($mueble && $mueble->imagen) {
             Storage::disk('local')->delete($mueble->imagen);
         }
-
-        if ($mueble) {
-            $mueble->delete();
-        }
-
+        if ($mueble) { $mueble->delete(); }
         $this->dispatch('mueble-guardado', msg: 'Mueble eliminado permanentemente');
     }
 
@@ -169,7 +180,7 @@ class Inventariomobi extends Component
         $this->material = ''; 
         $this->color = '';
         $this->estado = 'Bueno'; 
-        $this->lugar = 'Oficina principal'; // Coincide con el Enum de tu migración
+        $this->lugar = 'Oficina principal'; 
         $this->personal_id = ''; 
         $this->mueble_id = '';
         $this->imagen = null; 
@@ -177,41 +188,53 @@ class Inventariomobi extends Component
     }
 
     public function exportar()
-{
-    $muebles = \App\Models\Mobiliario::with('personal')
-        ->where(function($query) {
-            $query->where('nombre', 'like', '%' . $this->search . '%')
-                  ->orWhere('material', 'like', '%' . $this->search . '%')
-                  ->orWhere('lugar', 'like', '%' . $this->search . '%');
-        })
-        ->get();
+    {
+        // Aplicamos los mismos filtros que en el render para que el reporte sea fiel a lo que ve el usuario
+        $query = Mobiliario::with('personal');
 
-    $filename = 'reporte_inventario_mobi_' . date('Y-m-d_H-i-s') . '.csv';
-    $headers = [
-        'Content-Type'        => 'text/csv; charset=UTF-8',
-        'Content-Disposition' => "attachment; filename=\"$filename\"",
-    ];
-
-    $callback = function() use ($muebles) {
-        $file = fopen('php://output', 'w');
-        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
-        fputcsv($file, ['Nombre', 'Material', 'Color', 'Estado', 'Lugar', 'Asignado a'], ';');
-
-        foreach ($muebles as $mueble) {
-            fputcsv($file, [
-                $mueble->nombre,
-                $mueble->material,
-                $mueble->color,
-                $mueble->estado,
-                $mueble->lugar,
-                $mueble->personal
-                    ? $mueble->personal->nombre . ' ' . $mueble->personal->apellido
-                    : 'Sin asignar',
-            ], ';');
+        if ($this->search) {
+            $query->where(function($q) {
+                $q->where('nombre', 'like', '%' . $this->search . '%')
+                  ->orWhere('material', 'like', '%' . $this->search . '%');
+            });
         }
-        fclose($file);
-    };
 
-    return response()->stream($callback, 200, $headers);
-}
+        if ($this->filtroLugar) {
+            $query->where('lugar', $this->filtroLugar);
+        }
+
+        if ($this->filtroPersonal) {
+            $query->where('personal_id', $this->filtroPersonal);
+        }
+
+        $muebles = $query->get();
+
+        $filename = 'reporte_inventario_mobi_' . date('Y-m-d_H-i-s') . '.csv';
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($muebles) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+            fputcsv($file, ['Nombre', 'Material', 'Color', 'Estado', 'Lugar', 'Asignado a'], ';');
+
+            foreach ($muebles as $mueble) {
+                fputcsv($file, [
+                    $mueble->nombre,
+                    $mueble->material,
+                    $mueble->color,
+                    $mueble->estado,
+                    $mueble->lugar,
+                    $mueble->personal
+                        ? $mueble->personal->nombre . ' ' . $mueble->personal->apellido
+                        : 'Sin asignar',
+                ], ';');
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

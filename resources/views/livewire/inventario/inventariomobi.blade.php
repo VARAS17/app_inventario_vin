@@ -1,21 +1,39 @@
-<div class="p-6" x-data="{ showImgModal: false, imgModalSrc: '' }"> <!-- Agregamos x-data para el visor -->
+<div class="p-6" x-data="{ showImgModal: false, imgModalSrc: '' }">
     <div class="max-w-7xl mx-auto">
         
         <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h1 class="text-2xl font-bold text-gray-800">Inventario de Mobiliario</h1>
             
-            <div class="flex items-center gap-4 w-full md:w-auto">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <!-- Buscador General -->
                 <input type="text" wire:model.live="search" placeholder="Buscar mueble..." 
-                    class="border-gray-300 rounded-lg shadow-sm focus:ring-amber-500 focus:border-amber-500 w-full md:w-64">
+                    class="border-gray-300 rounded-lg shadow-sm focus:ring-amber-500 focus:border-amber-500 w-full md:w-48">
 
+                <!-- NUEVO: Filtro por Lugar -->
+                <select wire:model.live="filtroLugar" class="border-gray-300 rounded-lg shadow-sm focus:ring-amber-500 focus:border-amber-500 text-sm w-full md:w-auto">
+                    <option value="">-- Todos los Lugares --</option>
+                    <option value="Oficina principal">Oficina principal</option>
+                    <option value="Sala de Reuniones">Sala de Reuniones</option>
+                    <option value="Oficina de comunicaciones">Oficina de comunicaciones</option>
+                    <option value="Almacen">Almacen</option>
+                    <option value="Cocina">Cocina</option>
+                </select>
+
+                <!-- NUEVO: Filtro por Encargado -->
+                <select wire:model.live="filtroPersonal" class="border-gray-300 rounded-lg shadow-sm focus:ring-amber-500 focus:border-amber-500 text-sm w-full md:w-auto">
+                    <option value="">-- Todos los Encargados --</option>
+                    @foreach($personal_list as $persona)
+                        <option value="{{ $persona->id }}">{{ $persona->nombre }} {{ $persona->apellido }}</option>
+                    @endforeach
+                </select>
 
                 <button wire:click="exportar" 
                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition flex items-center shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
-                    Exportar CSV
+                    Exportar
                 </button>
                 
                 <button wire:click="crear" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition flex items-center shrink-0">
@@ -59,11 +77,10 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @foreach($muebles as $mueble)
+                    @forelse($muebles as $mueble)
                     <tr wire:key="mueble-{{ $mueble->id }}" class="hover:bg-amber-50/30 transition">
                         <td class="px-6 py-4">
                             @if($mueble->imagen)
-                                {{-- Cambio: Usar ruta local --}}
                                 <img src="{{ route('mobiliario.foto', ['path' => $mueble->imagen]) }}" class="h-12 w-12 object-cover rounded-lg border border-gray-200 cursor-pointer" @click="imgModalSrc = '{{ route('mobiliario.foto', ['path' => $mueble->imagen]) }}'; showImgModal = true">
                             @else
                                 <div class="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center border border-dashed border-gray-300">
@@ -92,7 +109,6 @@
                         </td>
                         <td class="px-6 py-4 text-center flex justify-center gap-2">
                             @if($mueble->imagen)
-                            {{-- Cambio: Usar ruta local en el Lightbox --}}
                             <button type="button" @click="imgModalSrc = '{{ route('mobiliario.foto', ['path' => $mueble->imagen]) }}'; showImgModal = true" class="text-amber-500 hover:text-amber-700 p-2" title="Ver foto">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -101,22 +117,28 @@
                             </button>
                             @endif
 
-                            <button type="button" wire:click="editar({{ $mueble->id }})" class="text-blue-400 hover:text-blue-600 p-2">
+                            <button type="button" wire:click="editar({{ $mueble->id }})" class="text-blue-400 hover:text-blue-600 p-2" title="Editar">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                             </button>
-                            <button type="button" wire:click="eliminar({{ $mueble->id }})" 
-                                wire:confirm="¿Seguro que deseas eliminar?" class="text-red-400 hover:text-red-600 p-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+
                         </td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 italic">
+                            No se encontraron registros de mobiliario.
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
+
+            <!-- Paginación -->
+            <div class="p-4 bg-gray-50 border-t">
+                {{ $muebles->links() }}
+            </div>
         </div>
     </div>
 
@@ -151,7 +173,6 @@
                     @if ($imagen)
                         <img src="{{ $imagen->temporaryUrl() }}" class="h-32 w-32 object-cover rounded-lg shadow-md mb-2">
                     @elseif($imagen_actual)
-                        {{-- Cambio: Usar ruta local para la imagen guardada --}}
                         <img src="{{ route('mobiliario.foto', ['path' => $imagen_actual]) }}" class="h-32 w-32 object-cover rounded-lg shadow-md mb-2">
                     @endif
 

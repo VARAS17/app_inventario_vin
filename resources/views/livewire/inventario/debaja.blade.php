@@ -1,33 +1,66 @@
 <div class="p-6">
     {{-- Encabezado y Acciones --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 text-center md:text-left">Dados de Baja</h1>
-            <p class="text-sm text-gray-500 text-center md:text-left">Historial de artículos malogrados o fuera de servicio</p>
+            <h1 class="text-2xl font-bold text-gray-800 text-center md:text-left">Historial de Bajas</h1>
+            <p class="text-sm text-gray-500 text-center md:text-left">Gestión de artículos fuera de servicio y eliminaciones físicas</p>
         </div>
         
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-            {{-- Botón Exportar CSV --}}
-            <button wire:click="exportarCSV" 
-                    title="Exportar a CSV"
-                    class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>Exportar CSV</span>
-            </button>
+        <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3">
+            {{-- Filtro por Categoría --}}
+            <div class="w-full sm:w-44">
+                <select wire:model.live="filterCategoria" 
+                        class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm shadow-sm bg-white">
+                    <option value="">Todas las categorías</option>
+                    @foreach($categorias as $cat)
+                        <option value="{{ $cat }}">{{ $cat }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Filtro por Responsable --}}
+            <div class="w-full sm:w-56">
+                <select wire:model.live="filterPersonal" 
+                        class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm shadow-sm bg-white">
+                    <option value="">Todos los responsables</option>
+                    @foreach($personal_list as $p)
+                        <option value="{{ $p->id }}">{{ $p->nombre }} {{ $p->apellido }}</option>
+                    @endforeach
+                </select>
+            </div>
 
             {{-- Buscador --}}
             <div class="relative w-full sm:w-64">
                 <input type="text" wire:model.live="search" 
                        class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm shadow-sm" 
-                       placeholder="Buscar por nombre o tipo...">
+                       placeholder="Buscar por nombre...">
                 <div class="absolute left-3 top-2.5 text-gray-400">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
             </div>
+
+            {{-- Botón Exportar CSV --}}
+            <button wire:click="exportarCSV" 
+                    title="Exportar reporte filtrado"
+                    class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm active:scale-95">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="hidden sm:inline">Exportar</span>
+            </button>
+        </div>
+    </div>
+
+    {{-- Indicador de carga --}}
+    <div wire:loading class="w-full mb-4">
+        <div class="flex items-center justify-center gap-2 text-red-600 text-sm font-medium">
+            <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Actualizando lista...
         </div>
     </div>
 
@@ -39,12 +72,12 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Artículo</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Categoría</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Detalles de Origen</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha Baja</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Detalles Técnicos</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Baja</th>
                         <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-gray-200" wire:loading.class="opacity-50">
                     @forelse($bajas as $baja)
                         <tr class="hover:bg-gray-50 transition-colors">
                             {{-- Columna Artículo --}}
@@ -66,10 +99,7 @@
                                     <div class="ml-4">
                                         <div class="text-sm font-bold text-gray-900">{{ $baja->nombre }}</div>
                                         <div class="text-[10px] text-gray-500 uppercase font-semibold flex items-center gap-1">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                            </svg>
-                                            {{ $baja->personal->nombre ?? 'Sin asignar' }}
+                                            <span class="text-gray-400 italic">Resp:</span> {{ $baja->personal->nombre ?? 'Sin asignar' }}
                                         </div>
                                     </div>
                                 </div>
@@ -77,38 +107,36 @@
 
                             {{-- Columna Categoría --}}
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase border border-red-200">
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 uppercase border border-gray-200">
                                     {{ $baja->tipo_inventario }}
                                 </span>
                             </td>
 
                             {{-- Columna Detalles --}}
                             <td class="px-6 py-4 text-sm">
-                                <div class="text-[11px] text-gray-600 space-y-1 bg-gray-50 p-2 rounded-md border border-gray-100">
+                                <div class="text-[11px] text-gray-600 space-y-0.5 bg-gray-50 p-2 rounded-md border border-gray-100 max-w-xs">
                                     @if($baja->detalles)
                                         @foreach($baja->detalles as $key => $value)
-                                            <p><span class="font-bold text-gray-400 uppercase mr-1">{{ $key }}:</span> <span class="text-gray-800">{{ $value }}</span></p>
+                                            <p><span class="font-bold text-gray-400 uppercase text-[9px]">{{ $key }}:</span> {{ $value ?: 'N/A' }}</p>
                                         @endforeach
                                     @else
-                                        <span class="text-gray-400 italic">Sin detalles técnicos</span>
+                                        <span class="text-gray-400 italic">Sin datos técnicos</span>
                                     @endif
                                 </div>
                             </td>
 
-                            {{-- Columna Fecha --}}
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                                <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                            {{-- Columna Fecha y Motivo --}}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div class="font-medium text-gray-800">
                                     {{ $baja->fecha_baja ? $baja->fecha_baja->format('d/m/Y') : $baja->created_at->format('d/m/Y') }}
                                 </div>
+                                <div class="text-[10px] text-red-500 font-bold uppercase">{{ $baja->motivo }}</div>
                             </td>
 
                             {{-- Acciones --}}
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <button wire:click="eliminarPermanente({{ $baja->id }})" 
-                                        wire:confirm="¿Estás seguro de eliminar este registro permanentemente? Esta acción borrará el archivo físico y no se puede deshacer."
+                                        wire:confirm="¿ESTÁS SEGURO? Esta acción eliminará permanentemente el registro de la base de datos y borrará el archivo de imagen del servidor."
                                         class="text-red-400 hover:text-red-600 transition-all p-2 hover:bg-red-50 rounded-full group"
                                         title="Eliminar permanentemente">
                                     <svg class="h-5 w-5 transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,10 +150,9 @@
                             <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <svg class="h-12 w-12 text-gray-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <p class="text-gray-500 font-medium">No se encontraron registros en el historial.</p>
-                                    <p class="text-gray-400 text-sm">Intenta con otro término de búsqueda.</p>
+                                    <p class="text-gray-500 font-medium">No se encontraron registros de baja con los filtros aplicados.</p>
                                 </div>
                             </td>
                         </tr>

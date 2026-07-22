@@ -2,20 +2,20 @@
 
 namespace App\Livewire\Inventario;
 
-use Maatwebsite\Excel\Facades\Excel;
-use Maatwebsite\Excel\Excel as ExcelFormat;
-
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination; // 1. Importar el Trait
 use App\Models\Tecnologia;
 use App\Models\Personal;
 use App\Models\Debaja; 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class Inventariotec extends Component
 {
     use WithFileUploads;
+    use WithPagination; // 2. Usar el Trait dentro de la clase
 
     #[Layout('layouts.app')]
 
@@ -26,10 +26,15 @@ class Inventariotec extends Component
     
     // Propiedades de Búsqueda y Filtros
     public $search = ''; 
-    public $filterPersonal = ''; // Nuevo filtro por usuario
-    public $filterLugar = '';    // Nuevo filtro por lugar
+    public $filterPersonal = ''; 
+    public $filterLugar = '';    
     
     public $isOpen = false;
+
+    // 3. Resetear la paginación automáticamente cuando cambian los filtros
+    public function updatingSearch() { $this->resetPage(); }
+    public function updatingFilterPersonal() { $this->resetPage(); }
+    public function updatingFilterLugar() { $this->resetPage(); }
 
     protected function rules()
     {
@@ -44,23 +49,20 @@ class Inventariotec extends Component
         ];
     }
 
-    // Resetear la paginación cuando se busca algo (opcional si usas WithPagination)
-    //public function updatingSearch() { $this->resetPage(); }
-
+    /**
+     * Renderiza la vista con los datos paginados
+     */
     public function render()
     {
-        $equipos = $this->getFilteredQuery()->latest()->get();
-
         return view('livewire.inventario.inventariotec', [
-            'equipos' => $equipos,
+            'equipos' => $this->getFilteredQuery()->latest()->paginate(10), 
             'personales' => Personal::all(),
-            // Obtenemos la lista de lugares únicos para el select del filtro
             'lugaresDisponibles' => Tecnologia::select('lugar')->distinct()->pluck('lugar')
         ]);
     }
 
     /**
-     * Centralizamos la consulta para que Render y Exportar usen la misma lógica
+     * Lógica de consulta compartida para render y exportación
      */
     public function getFilteredQuery()
     {
@@ -71,7 +73,6 @@ class Inventariotec extends Component
                     $q->where('nombre', 'like', $searchTerm)
                       ->orWhere('marca', 'like', $searchTerm)
                       ->orWhere('serie', 'like', $searchTerm);
-                      // ->orWhere('codigo', 'like', $searchTerm); // Descomenta si tienes columna 'codigo'
                 });
             })
             ->when($this->filterPersonal, function($query) {
@@ -107,64 +108,72 @@ class Inventariotec extends Component
     {
         $this->validate();
 
-        if ($this->estado === 'Malogrado') {
-            $rutaImagen = $this->imagen_actual;
-            if ($this->imagen) {
-                $rutaImagen = $this->imagen->store('tecnologia', 'local');
-            }
-
-            Debaja::create([
-                'nombre'          => $this->nombre,
-                'tipo_inventario' => 'Tecnología',
-                'motivo'          => 'Malogrado',
-                'fecha_baja'      => now(),
-                'personal_id'     => $this->personal_id ?: null,
-                'imagen'          => $rutaImagen,
-                'detalles'        => [
-                    'marca' => $this->marca,
-                    'serie' => $this->serie,
-                    'lugar' => $this->lugar,
-                ],
-            ]);
-
-            if ($this->equipo_id) {
-                $equipoActivo = Tecnologia::find($this->equipo_id);
-                if ($equipoActivo) $equipoActivo->delete();
-            }
-
-            $msg = 'Equipo tecnológico movido al historial de bajas.';
-        } else {
-            $datos = [
-                'nombre'      => $this->nombre,
-                'marca'       => $this->marca,
-                'serie'       => $this->serie,
-                'estado'      => $this->estado,
-                'lugar'       => $this->lugar,
-                'personal_id' => $this->personal_id ?: null,
-            ];
-
-            if ($this->imagen) {
-                if ($this->equipo_id && $this->imagen_actual) {
-                    Storage::disk('local')->delete($this->imagen_actual);
+        DB::transaction(function () {
+            if ($this->estado === 'Malogrado') {
+                // --- CASO: MOVER A LA TABLA DE BAJAS ---
+                $rutaImagen = $this->imagen_actual;
+                if ($this->imagen) {
+                    $rutaImagen = $this->imagen->store('tecnologia', 'local');
                 }
-                $datos['imagen'] = $this->imagen->store('tecnologia', 'local');
+
+                Debaja::create([
+                    'nombre'          => $this->nombre,
+                    'tipo_inventario' => 'Tecnología',
+                    'motivo'          => 'Malogrado',
+                    'fecha_baja'      => now(),
+                    'personal_id'     => $this->personal_id ?: null,
+                    'imagen'          => $rutaImagen,
+                    'detalles'        => [
+                        'marca' => $this->marca,
+                        'serie' => $this->serie,
+                        'lugar' => $this->lugar,
+                    ],
+                ]);
+
+                // Si existía en la tabla activa, lo borramos
+                if ($this->equipo_id) {
+                    $equipoActivo = Tecnologia::find($this->equipo_id);
+                    if ($equipoActivo) $equipoActivo->delete();
+                }
+
+                $msg = 'Equipo tecnológico movido al historial de bajas.';
+            } else {
+                // --- CASO: REGISTRO O ACTUALIZACIÓN NORMAL ---
+                $datos = [
+                    'nombre'      => $this->nombre,
+                    'marca'       => $this->marca,
+                    'serie'       => $this->serie,
+                    'estado'      => $this->estado,
+                    'lugar'       => $this->lugar,
+                    'personal_id' => $this->personal_id ?: null,
+                ];
+
+                if ($this->imagen) {
+                    // Borrar imagen anterior si existe
+                    if ($this->equipo_id && $this->imagen_actual) {
+                        Storage::disk('local')->delete($this->imagen_actual);
+                    }
+                    $datos['imagen'] = $this->imagen->store('tecnologia', 'local');
+                }
+
+                Tecnologia::updateOrCreate(['id' => $this->equipo_id], $datos);
+                $msg = $this->equipo_id ? 'Equipo actualizado correctamente' : 'Equipo registrado con éxito';
             }
 
-            Tecnologia::updateOrCreate(['id' => $this->equipo_id], $datos);
-            $msg = $this->equipo_id ? 'Equipo actualizado correctamente' : 'Equipo registrado con éxito';
-        }
-
-        $this->dispatch('mueble-guardado', msg: $msg);
-        $this->closeModal();
+            $this->dispatch('mueble-guardado', msg: $msg);
+            $this->closeModal();
+        });
     }
 
     public function eliminar($id)
     {
         $equipo = Tecnologia::find($id);
-        if ($equipo && $equipo->imagen) {
-            Storage::disk('local')->delete($equipo->imagen);
+        if ($equipo) {
+            if ($equipo->imagen) {
+                Storage::disk('local')->delete($equipo->imagen);
+            }
+            $equipo->delete();
         }
-        if ($equipo) $equipo->delete();
 
         $this->dispatch('mueble-guardado', msg: 'Equipo eliminado permanentemente');
     }
@@ -181,7 +190,7 @@ class Inventariotec extends Component
         $this->marca = ''; 
         $this->serie = '';
         $this->estado = 'En funcionamiento'; 
-        $this->lugar = 'Oficina principal'; 
+        $this->lugar = 'Oficina Principal'; 
         $this->personal_id = ''; 
         $this->equipo_id = '';
         $this->imagen = null;
@@ -190,7 +199,7 @@ class Inventariotec extends Component
 
     public function exportar()
     {
-        // Usamos la misma lógica de filtros que la vista
+        // En exportación usamos ->get() para obtener todos los registros filtrados
         $equipos = $this->getFilteredQuery()->get();
 
         $filename = 'reporte_inventario_tecno_' . date('Y-m-d_H-i-s') . '.csv';
@@ -201,7 +210,7 @@ class Inventariotec extends Component
 
         $callback = function() use ($equipos) {
             $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8 para Excel
             fputcsv($file, ['Nombre', 'Marca', 'Serie', 'Estado', 'Lugar', 'Asignado a'], ';');
             
             foreach ($equipos as $equipo) {

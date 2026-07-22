@@ -6,7 +6,8 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
 use App\Models\Debaja as DebajaModel; 
-use Illuminate\Support\Facades\Storage; // IMPORTANTE: Para manejar el borrado de archivos
+use App\Models\Personal;
+use Illuminate\Support\Facades\Storage;
 
 class Debaja extends Component
 {
@@ -14,21 +15,43 @@ class Debaja extends Component
 
     #[Layout('layouts.app')]
 
+    // Propiedades de búsqueda y filtros
     public $search = '';
+    public $filterPersonal = '';
+    public $filterCategoria = '';
+
+    // Resetear la página cuando cambian los filtros
+    public function updatingSearch() { $this->resetPage(); }
+    public function updatingFilterPersonal() { $this->resetPage(); }
+    public function updatingFilterCategoria() { $this->resetPage(); }
+
+    /**
+     * Centralizamos la consulta para que render() y exportar() 
+     * manejen siempre los mismos filtros.
+     */
+    public function getFilteredQuery()
+    {
+        return DebajaModel::with('personal')
+            ->when($this->search, function($query) {
+                $query->where('nombre', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->filterPersonal, function($query) {
+                $query->where('personal_id', $this->filterPersonal);
+            })
+            ->when($this->filterCategoria, function($query) {
+                $query->where('tipo_inventario', $this->filterCategoria);
+            });
+    }
 
     public function render()
     {
-        // Buscamos en la tabla de bajas
-        $bajas = DebajaModel::with('personal')
-            ->where(function($query) {
-                $query->where('nombre', 'like', '%' . $this->search . '%')
-                      ->orWhere('tipo_inventario', 'like', '%' . $this->search . '%');
-            })
-            ->latest()
-            ->paginate(10);
+        $bajas = $this->getFilteredQuery()->latest()->paginate(10);
 
         return view('livewire.inventario.debaja', [
-            'bajas' => $bajas
+            'bajas' => $bajas,
+            'personal_list' => Personal::orderBy('nombre')->get(),
+            // Obtenemos las categorías únicas que existen en la tabla de bajas
+            'categorias' => DebajaModel::select('tipo_inventario')->distinct()->pluck('tipo_inventario')
         ]);
     }
 
@@ -36,16 +59,12 @@ class Debaja extends Component
     {
         $registro = DebajaModel::findOrFail($id);
 
-        // 1. Borrar el archivo físico del disco local si existe
         if ($registro->imagen) {
-            // Esto busca en storage/app/ y borra la ruta guardada
             Storage::disk('local')->delete($registro->imagen);
         }
 
-        // 2. Borrar el registro de la base de datos
         $registro->delete();
 
-        // 3. Despachar mensaje de éxito (ajusta el nombre del evento si usas otro en tu JS)
         $this->dispatch('mueble-guardado', msg: 'Registro y archivo eliminados correctamente');
     }
 
@@ -53,14 +72,8 @@ class Debaja extends Component
     {
         $fileName = 'reporte_bajas_' . date('Y-m-d_H-i-s') . '.csv';
 
-        // Cambiamos latest() por orderBy('id', 'asc') para que el ID 1 sea el primero
-        $registros = DebajaModel::with('personal')
-            ->where(function($query) {
-                $query->where('nombre', 'like', '%' . $this->search . '%')
-                    ->orWhere('tipo_inventario', 'like', '%' . $this->search . '%');
-            })
-            ->orderBy('id', 'asc') // <--- ORDENAR POR ID ASCENDENTE
-            ->get();
+        // Usamos la misma consulta filtrada para el reporte
+        $registros = $this->getFilteredQuery()->orderBy('id', 'asc')->get();
 
         $headers = [
             "Content-type"        => "text/csv; charset=UTF-8",
@@ -77,22 +90,19 @@ class Debaja extends Component
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             
             // Cabeceras
-            $columns = ['ID', 'ARTICULO', 'CATEGORIA', 'RESPONSABLE', 'FECHA DE BAJA'];
-            
-            // ';' como separador y chr(0) para quitar comillas
-            fputcsv($file, $columns, ';', chr(0));
+            $columns = ['ID', 'ARTICULO', 'CATEGORIA', 'RESPONSABLE', 'FECHA DE BAJA', 'MOTIVO'];
+            fputcsv($file, $columns, ';');
 
             foreach ($registros as $reg) {
-                // Limpieza básica de datos para no romper columnas
                 $fila = [
                     $reg->id,
                     str_replace([';', "\n", "\r"], ' ', $reg->nombre ?? ''),
-                    str_replace([';', "\n", "\r"], ' ', $reg->tipo_inventario ?? ''),
+                    $reg->tipo_inventario,
                     $reg->personal ? ($reg->personal->nombre . ' ' . $reg->personal->apellido) : 'Sin asignar',
                     $reg->fecha_baja ? $reg->fecha_baja->format('d/m/Y') : $reg->created_at->format('d/m/Y'),
+                    $reg->motivo
                 ];
-
-                fputcsv($file, $fila, ';', chr(0));
+                fputcsv($file, $fila, ';');
             }
 
             fclose($file);
