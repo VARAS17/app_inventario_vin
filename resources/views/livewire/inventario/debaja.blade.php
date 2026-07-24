@@ -1,4 +1,4 @@
-<div class="p-6">
+<div class="p-6" x-data="{ showImgModal: false, imgModalSrc: '' }">
     {{-- Encabezado y Acciones --}}
     <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
         <div>
@@ -85,9 +85,10 @@
                                 <div class="flex items-center">
                                     <div class="h-10 w-10 flex-shrink-0">
                                         @if($baja->imagen)
-                                            <img class="h-10 w-10 rounded-lg object-cover border border-gray-200" 
+                                            <img class="h-10 w-10 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 transition" 
                                                  src="{{ route('personal.foto', ['path' => $baja->imagen]) }}" 
-                                                 alt="{{ $baja->nombre }}">
+                                                 alt="{{ $baja->nombre }}"
+                                                 @click="imgModalSrc = '{{ route('personal.foto', ['path' => $baja->imagen]) }}'; showImgModal = true">
                                         @else
                                             <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
                                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +135,20 @@
                             </td>
 
                             {{-- Acciones --}}
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <td class="px-6 py-4 whitespace-nowrap text-center flex justify-center items-center gap-1">
+                                {{-- BOTÓN PARA VER IMAGEN --}}
+                                @if($baja->imagen)
+                                    <button type="button" 
+                                            @click="imgModalSrc = '{{ route('personal.foto', ['path' => $baja->imagen]) }}'; showImgModal = true"
+                                            class="text-blue-500 hover:text-blue-700 transition-all p-2 hover:bg-blue-50 rounded-full"
+                                            title="Ver fotografía">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </button>
+                                @endif
+
                                 <button wire:click="eliminarPermanente({{ $baja->id }})" 
                                         wire:confirm="¿ESTÁS SEGURO? Esta acción eliminará permanentemente el registro de la base de datos y borrará el archivo de imagen del servidor."
                                         class="text-red-400 hover:text-red-600 transition-all p-2 hover:bg-red-50 rounded-full group"
@@ -165,5 +179,26 @@
     {{-- Paginación --}}
     <div class="mt-6">
         {{ $bajas->links() }}
+    </div>
+
+    {{-- MODAL LIGHTBOX (VISOR DE IMAGEN) --}}
+    <div x-show="showImgModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+         style="display: none;"
+         @keydown.escape.window="showImgModal = false"
+         @click.self="showImgModal = false">
+        
+        <div class="relative max-w-4xl w-full">
+            {{-- Botón Cerrar --}}
+            <button @click="showImgModal = false" class="absolute -top-12 right-0 text-white hover:text-red-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            {{-- Imagen --}}
+            <img :src="imgModalSrc" 
+                 class="mx-auto max-w-full max-h-[85vh] rounded-lg shadow-2xl border-4 border-white/10 object-contain">
+        </div>
     </div>
 </div>

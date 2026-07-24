@@ -51,6 +51,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 border-b">
                         <tr>
+                            <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic w-10">#</th>
                             <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Artículo</th>
                             <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Marca</th>
                             <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Stock Actual</th>
@@ -61,6 +62,9 @@
                     <tbody class="divide-y divide-gray-100">
                         @forelse($utiles as $util)
                         <tr wire:key="util-{{ $util->id }}" class="hover:bg-emerald-50/30 transition">
+                            <td class="px-6 py-4 text-sm font-bold text-gray-400">
+                                {{ $loop->iteration }}
+                            </td>
                             <td class="px-6 py-4 font-medium text-gray-900">{{ $util->nombre }}</td>
                             <td class="px-6 py-4 text-gray-600 font-medium italic">{{ $util->marca }}</td>
                             <td class="px-6 py-4">
@@ -90,7 +94,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="p-8 text-center text-gray-400 italic">No se encontraron artículos.</td></tr>
+                        <tr><td colspan="6" class="p-8 text-center text-gray-400 italic">No se encontraron artículos.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -124,7 +128,6 @@
                         <input type="number" wire:model.live="cantidadMovimiento" 
                             class="w-full mt-1 border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 {{ $errors->has('cantidadMovimiento') ? 'border-red-500 bg-red-50' : '' }}">
                         
-                        <!-- MENSAJE DE ERROR MEJORADO -->
                         @error('cantidadMovimiento') 
                             <div class="mt-2 flex items-center p-2 text-xs text-red-800 bg-red-50 rounded-lg border border-red-100">
                                 <svg class="w-4 h-4 mr-1 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
@@ -199,7 +202,7 @@
     </div>
     @endif
 
-    <!-- MODAL DE REGISTRO / EDICIÓN (CRUD) CON MARCA -->
+    <!-- MODAL DE REGISTRO / EDICIÓN -->
     @if($isOpen)
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-gray-900/20 backdrop-blur-sm" wire:click="closeModal"></div>
@@ -216,7 +219,6 @@
                         @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
-                    <!-- NUEVO CAMPO MARCA -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Marca</label>
                         <input type="text" wire:model="marca" placeholder="Ej: Faber-Castell, Atlas..." class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500">

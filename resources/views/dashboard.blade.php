@@ -56,7 +56,7 @@
                 <div class="p-4 bg-red-50 border-b border-red-100 font-bold text-red-800">Equipos en Mal Estado</div>
                 <div class="p-4">
                     <ul class="divide-y divide-gray-100">
-                        @forelse(\App\Models\Tecnologia::where('estado', 'Guardado')->get() as $tech)
+                        @forelse(\App\Models\Tecnologia::where('estado', 'Reparacion')->get() as $tech)
                             <li class="py-3 flex justify-between">
                                 <span>{{ $tech->nombre }} ({{ $tech->marca }})</span>
                                 <span class="text-red-500 font-bold">S/N: {{ $tech->serie }}</span>

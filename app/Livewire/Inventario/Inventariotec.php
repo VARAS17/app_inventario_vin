@@ -42,7 +42,7 @@ class Inventariotec extends Component
             'nombre' => 'required|min:3',
             'marca' => 'required',
             'serie' => 'nullable',
-            'estado' => 'required|in:En funcionamiento,Guardado,Malogrado',
+            'estado' => 'required|in:En funcionamiento, Guardado,En Mantenimiento,Reparacion,Dar de Baja',
             'lugar' => 'required',
             'personal_id' => 'nullable|exists:personal,id',
             'imagen' => 'nullable|image|max:2048',
@@ -109,7 +109,7 @@ class Inventariotec extends Component
         $this->validate();
 
         DB::transaction(function () {
-            if ($this->estado === 'Malogrado') {
+            if ($this->estado === 'Dar de Baja') {
                 // --- CASO: MOVER A LA TABLA DE BAJAS ---
                 $rutaImagen = $this->imagen_actual;
                 if ($this->imagen) {
@@ -119,7 +119,7 @@ class Inventariotec extends Component
                 Debaja::create([
                     'nombre'          => $this->nombre,
                     'tipo_inventario' => 'Tecnología',
-                    'motivo'          => 'Malogrado',
+                    'motivo'          => 'Dar de Baja',
                     'fecha_baja'      => now(),
                     'personal_id'     => $this->personal_id ?: null,
                     'imagen'          => $rutaImagen,

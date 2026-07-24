@@ -68,6 +68,7 @@
             <table class="w-full text-left border-collapse">
                 <thead class="bg-gray-50 border-b">
                     <tr>
+                        <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic w-10">#</th>
                         <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Equipo / Responsable</th>
                         <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Marca / Serie</th>
                         <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Lugar</th>
@@ -78,6 +79,9 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse($equipos as $equipo)
                     <tr wire:key="equipo-{{ $equipo->id }}" class="hover:bg-blue-50/30 transition">
+                        <td class="px-6 py-4 text-sm font-bold text-gray-400">
+                            {{ ($equipos->currentPage() - 1) * $equipos->perPage() + $loop->iteration }}
+                        </td>
                         <td class="px-6 py-4">
                             <div class="text-lg font-bold text-gray-900 leading-tight">{{ $equipo->nombre }}</div>
                             <div class="text-sm text-blue-600 font-medium italic">
@@ -116,16 +120,16 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
+                        <td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">
                             No se encontraron equipos con los filtros seleccionados.
                         </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
-            <div class="mt-4">
-    {{ $equipos->links() }}
-</div>
+            <div class="p-4 bg-gray-50 border-t">
+                {{ $equipos->links() }}
+            </div>
         </div>
     </div>
 
@@ -173,7 +177,9 @@
                             <select wire:model="estado" class="w-full mt-1 border-gray-300 rounded-lg">
                                 <option value="En funcionamiento">En funcionamiento</option>
                                 <option value="Guardado">Guardado</option>
-                                <option value="Malogrado">Malogrado</option>
+                                <option value="En Mantenimiento">En Mantenimiento</option>
+                                <option value="Reparacion">Reparacion</option>
+                                <option value="Dar de Baja">Dar de Baja</option>
                             </select>
                         </div>
                     </div>
