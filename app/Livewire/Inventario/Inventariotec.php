@@ -42,7 +42,7 @@ class Inventariotec extends Component
             'nombre' => 'required|min:3',
             'marca' => 'required',
             'serie' => 'nullable',
-            'estado' => 'required|in:En funcionamiento, Guardado,En Mantenimiento,Reparacion,Dar de Baja',
+            'estado' => 'required|in:En funcionamiento,Guardado,En Mantenimiento,Reparacion,Dar de Baja',
             'lugar' => 'required',
             'personal_id' => 'nullable|exists:personal,id',
             'imagen' => 'nullable|image|max:2048',

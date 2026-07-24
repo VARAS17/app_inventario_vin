@@ -53,6 +53,8 @@
                     <option value="Oficina de comunicaciones">Oficina de comunicaciones</option>
                     <option value="Almacen">Almacen</option>
                     <option value="Cocina">Cocina</option>
+                    <option value="Sala Reuniones/ropero 1">Sala Reuniones/ropero 1</option>
+                    <option value="Sala Reuniones/ropero 2">Sala Reuniones/ropero 2</option>
                 </select>
             </div>
         </div>
@@ -170,6 +172,8 @@
                                 <option value="Oficina de comunicaciones">Oficina de comunicaciones</option>
                                 <option value="Almacen">Almacen</option>
                                 <option value="Cocina">Cocina</option>
+                                <option value="Sala Reuniones/ropero 1">Sala Reuniones/ropero 1</option>
+                                <option value="Sala Reuniones/ropero 2">Sala Reuniones/ropero 2</option>
                             </select>
                         </div>
                         <div>
