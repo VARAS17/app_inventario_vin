@@ -7,7 +7,10 @@ use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
 use App\Models\Debaja as DebajaModel; 
 use App\Models\Personal;
+use App\Models\Tecnologia; // Asegúrate de importar tus modelos originales
+use App\Models\Mobiliario; // Importa otros modelos según tus tipos
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class Debaja extends Component
 {
@@ -26,8 +29,7 @@ class Debaja extends Component
     public function updatingFilterCategoria() { $this->resetPage(); }
 
     /**
-     * Centralizamos la consulta para que render() y exportar() 
-     * manejen siempre los mismos filtros.
+     * Consulta centralizada con filtros
      */
     public function getFilteredQuery()
     {
@@ -50,9 +52,61 @@ class Debaja extends Component
         return view('livewire.inventario.debaja', [
             'bajas' => $bajas,
             'personal_list' => Personal::orderBy('nombre')->get(),
-            // Obtenemos las categorías únicas que existen en la tabla de bajas
             'categorias' => DebajaModel::select('tipo_inventario')->distinct()->pluck('tipo_inventario')
         ]);
+    }
+
+    public function restaurar($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $baja = DebajaModel::findOrFail($id);
+            $nuevoRegistro = null;
+
+            // 1. Identificar modelo y tabla de origen
+            // Usamos match para mayor claridad
+            $nuevoRegistro = match ($baja->tipo_inventario) {
+                'Mueble', 'Mobiliario' => new \App\Models\Mobiliario(),
+                'Equipo', 'Tecnologia' => new \App\Models\Tecnologia(),
+                default => null,
+            };
+
+            if (!$nuevoRegistro) {
+                throw new \Exception("No se reconoció el tipo de inventario: " . $baja->tipo_inventario);
+            }
+
+            // 2. Mapear datos básicos comunes
+            $nuevoRegistro->nombre      = $baja->nombre;
+            $nuevoRegistro->personal_id = $baja->personal_id;
+            $nuevoRegistro->imagen      = $baja->imagen;
+            
+            // IMPORTANTE: Definir el estado inicial al volver
+            // Ajusta 'Activo' por el nombre de estado que uses (ej: 'Disponible')
+            $nuevoRegistro->estado      = 'Activo'; 
+
+            // 3. Restaurar campos específicos (Marca, Serie, Modelo, etc.)
+            // Como en la tabla 'debajas' estos datos están en un JSON llamado 'detalles'
+            if ($baja->detalles && is_array($baja->detalles)) {
+                foreach ($baja->detalles as $columna => $valor) {
+                    // Asignamos dinámicamente cada valor a su columna original
+                    $nuevoRegistro->{$columna} = $valor;
+                }
+            }
+
+            // 4. Guardar en tabla original y borrar de bajas
+            $nuevoRegistro->save();
+            $baja->delete();
+
+            DB::commit();
+
+            $this->dispatch('mueble-guardado', msg: 'El artículo ha vuelto a su inventario original.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Error al deshacer baja: " . $e->getMessage());
+            $this->dispatch('mueble-guardado', msg: 'Error: ' . $e->getMessage());
+        }
     }
 
     public function eliminarPermanente($id)
@@ -65,14 +119,12 @@ class Debaja extends Component
 
         $registro->delete();
 
-        $this->dispatch('mueble-guardado', msg: 'Registro y archivo eliminados correctamente');
+        $this->dispatch('mueble-guardado', msg: 'Registro y archivo eliminados definitivamente');
     }
 
     public function exportarCSV()
     {
         $fileName = 'reporte_bajas_' . date('Y-m-d_H-i-s') . '.csv';
-
-        // Usamos la misma consulta filtrada para el reporte
         $registros = $this->getFilteredQuery()->orderBy('id', 'asc')->get();
 
         $headers = [
@@ -85,11 +137,8 @@ class Debaja extends Component
 
         $callback = function() use($registros) {
             $file = fopen('php://output', 'w');
-            
-            // BOM para tildes
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             
-            // Cabeceras
             $columns = ['ID', 'ARTICULO', 'CATEGORIA', 'RESPONSABLE', 'FECHA DE BAJA', 'MOTIVO'];
             fputcsv($file, $columns, ';');
 
@@ -104,7 +153,6 @@ class Debaja extends Component
                 ];
                 fputcsv($file, $fila, ';');
             }
-
             fclose($file);
         };
 

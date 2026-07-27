@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
         PersonalSeeder::class,
         tecno::class,
+        DebajaSeeder::class,
     ]);
     }
 }

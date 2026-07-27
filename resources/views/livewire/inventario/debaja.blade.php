@@ -3,7 +3,7 @@
     <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-800 text-center md:text-left">Historial de Bajas</h1>
-            <p class="text-sm text-gray-500 text-center md:text-left">Gestión de artículos fuera de servicio y eliminaciones físicas</p>
+            <p class="text-sm text-gray-500 text-center md:text-left">Gestión de artículos fuera de servicio y restauraciones</p>
         </div>
         
         <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3">
@@ -60,7 +60,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Actualizando lista...
+            Procesando...
         </div>
     </div>
 
@@ -149,6 +149,17 @@
                                     </button>
                                 @endif
 
+                                {{-- BOTÓN RESTAURAR (DESHACER) --}}
+                                <button wire:click="restaurar({{ $baja->id }})" 
+                                        wire:confirm="¿Deseas restaurar este artículo al inventario activo?"
+                                        class="text-green-500 hover:text-green-700 transition-all p-2 hover:bg-green-50 rounded-full group"
+                                        title="Restaurar al inventario">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform group-hover:-rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                    </svg>
+                                </button>
+
+                                {{-- BOTÓN ELIMINAR PERMANENTE --}}
                                 <button wire:click="eliminarPermanente({{ $baja->id }})" 
                                         wire:confirm="¿ESTÁS SEGURO? Esta acción eliminará permanentemente el registro de la base de datos y borrará el archivo de imagen del servidor."
                                         class="text-red-400 hover:text-red-600 transition-all p-2 hover:bg-red-50 rounded-full group"

@@ -20,7 +20,7 @@ class Inventariotec extends Component
     #[Layout('layouts.app')]
 
     // Propiedades del formulario
-    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina Principal', $personal_id, $equipo_id;
+    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina principal', $personal_id, $equipo_id;
     public $imagen; 
     public $imagen_actual; 
     
@@ -190,7 +190,7 @@ class Inventariotec extends Component
         $this->marca = ''; 
         $this->serie = '';
         $this->estado = 'En funcionamiento'; 
-        $this->lugar = 'Oficina Principal'; 
+        $this->lugar = 'Oficina principal'; 
         $this->personal_id = ''; 
         $this->equipo_id = '';
         $this->imagen = null;
