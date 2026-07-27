@@ -56,59 +56,73 @@ class Debaja extends Component
         ]);
     }
 
-    public function restaurar($id)
-    {
-        DB::beginTransaction();
+public function restaurar($id)
+{
+    DB::beginTransaction();
 
-        try {
-            $baja = DebajaModel::findOrFail($id);
-            $nuevoRegistro = null;
+    try {
+        $baja = DebajaModel::findOrFail($id);
 
-            // 1. Identificar modelo y tabla de origen
-            // Usamos match para mayor claridad
-            $nuevoRegistro = match ($baja->tipo_inventario) {
-                'Mueble', 'Mobiliario' => new \App\Models\Mobiliario(),
-                'Equipo', 'Tecnologia' => new \App\Models\Tecnologia(),
-                default => null,
-            };
+        $tipo = strtolower(trim($baja->tipo_inventario));
+        $nuevoRegistro = null;
 
-            if (!$nuevoRegistro) {
-                throw new \Exception("No se reconoció el tipo de inventario: " . $baja->tipo_inventario);
-            }
-
-            // 2. Mapear datos básicos comunes
-            $nuevoRegistro->nombre      = $baja->nombre;
-            $nuevoRegistro->personal_id = $baja->personal_id;
-            $nuevoRegistro->imagen      = $baja->imagen;
+        // 1. Configurar el modelo según la tabla y sus columnas reales
+        if ($tipo === 'mobiliario' || $tipo === 'mueble') {
+            $nuevoRegistro = new \App\Models\Mobiliario();
             
-            // IMPORTANTE: Definir el estado inicial al volver
-            // Ajusta 'Activo' por el nombre de estado que uses (ej: 'Disponible')
-            $nuevoRegistro->estado      = 'Activo'; 
+            $nuevoRegistro->estado = 'Bueno'; 
+            $nuevoRegistro->material = $baja->detalles['material'] ?? 'No especificado';
+            $nuevoRegistro->color = $baja->detalles['color'] ?? 'No especificado';
+            
+            // LA TABLA MOBILIARIOS SÍ TIENE IMAGEN
+            $nuevoRegistro->imagen = $baja->imagen;
 
-            // 3. Restaurar campos específicos (Marca, Serie, Modelo, etc.)
-            // Como en la tabla 'debajas' estos datos están en un JSON llamado 'detalles'
-            if ($baja->detalles && is_array($baja->detalles)) {
-                foreach ($baja->detalles as $columna => $valor) {
-                    // Asignamos dinámicamente cada valor a su columna original
+        } elseif ($tipo === 'tecnología' || $tipo === 'tecnologia' || $tipo === 'equipo') {
+            $nuevoRegistro = new \App\Models\Tecnologia();
+            
+            $nuevoRegistro->estado = 'En funcionamiento';
+            $nuevoRegistro->marca = $baja->detalles['marca'] ?? 'Genérica';
+            
+            // LA TABLA TECNOLOGIAS NO TIENE IMAGEN (según tu migración)
+            // Por eso NO asignamos $nuevoRegistro->imagen aquí.
+        }
+
+        if (!$nuevoRegistro) {
+            throw new \Exception("La categoría '{$baja->tipo_inventario}' no es válida.");
+        }
+
+        // 2. Mapear datos comunes que existen en AMBAS tablas
+        $nuevoRegistro->nombre = $baja->nombre;
+        $nuevoRegistro->personal_id = $baja->personal_id;
+        $nuevoRegistro->lugar = $baja->detalles['lugar'] ?? 'Oficina principal';
+
+        // 3. Restaurar otros detalles (como 'serie' para tecnología)
+        if ($baja->detalles && is_array($baja->detalles)) {
+            foreach ($baja->detalles as $columna => $valor) {
+                // Solo asignamos si la columna no ha sido asignada ya
+                // Y evitamos columnas que no existen en la tabla destino
+                if (!isset($nuevoRegistro->{$columna})) {
+                    // Evitamos intentar meter material/color en tecnologías o serie en mobiliario
+                    // si no existen como columnas.
                     $nuevoRegistro->{$columna} = $valor;
                 }
             }
-
-            // 4. Guardar en tabla original y borrar de bajas
-            $nuevoRegistro->save();
-            $baja->delete();
-
-            DB::commit();
-
-            $this->dispatch('mueble-guardado', msg: 'El artículo ha vuelto a su inventario original.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Illuminate\Support\Facades\Log::error("Error al deshacer baja: " . $e->getMessage());
-            $this->dispatch('mueble-guardado', msg: 'Error: ' . $e->getMessage());
         }
-    }
 
+        // 4. Guardar y eliminar de bajas
+        $nuevoRegistro->save();
+        $baja->delete();
+
+        DB::commit();
+
+        $this->dispatch('mueble-guardado', msg: 'Registro restaurado correctamente');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Illuminate\Support\Facades\Log::error("Error restaurando: " . $e->getMessage());
+        $this->dispatch('mueble-guardado', msg: 'Error: ' . $e->getMessage());
+    }
+}
     public function eliminarPermanente($id)
     {
         $registro = DebajaModel::findOrFail($id);

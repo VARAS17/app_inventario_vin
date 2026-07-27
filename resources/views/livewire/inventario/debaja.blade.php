@@ -100,7 +100,7 @@
                                     <div class="ml-4">
                                         <div class="text-sm font-bold text-gray-900">{{ $baja->nombre }}</div>
                                         <div class="text-[10px] text-gray-500 uppercase font-semibold flex items-center gap-1">
-                                            <span class="text-gray-400 italic">Resp:</span> {{ $baja->personal->nombre ?? 'Sin asignar' }}
+                                            <span class="text-gray-400 italic">Resp:</span>{{ ($baja->personal->nombre ?? '') . ' ' . ($baja->personal->apellido ?? 'Sin asignar') }}
                                         </div>
                                     </div>
                                 </div>

@@ -10,6 +10,8 @@ class Tecnologia extends Model
     /**
      * Campos permitidos para asignación masiva.
      */
+    // Dentro de app/Models/Tecnologia.php
+    protected $table = 'tecnologias';
     protected $fillable = [
         'nombre',
         'marca',

@@ -31,6 +31,24 @@
                     Nuevo Equipo
                 </button>
             </div>
+
+
+            <!-- Notificación Flotante (Éxito) -->
+            <div x-data="{ show: false, message: '' }"
+                x-on:mueble-guardado.window="show = true; message = $event.detail.msg; setTimeout(() => show = false, 3000)"
+                x-show="show"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform -translate-y-2"
+                x-transition:enter-end="opacity-100 transform translate-y-0"
+                class="fixed top-5 right-5 z-[100]"
+                style="display: none;">
+                <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl border-r-4 border-green-500 flex items-center gap-3">
+                    <span x-text="message"></span>
+                    <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+            </div>
         </div>
 
         <!-- Fila de Filtros Adicionales -->

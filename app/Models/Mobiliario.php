@@ -10,6 +10,8 @@ class Mobiliario extends Model
     /**
      * Campos permitidos para asignación masiva.
      */
+    // Dentro de app/Models/Mobiliario.php
+    protected $table = 'mobiliarios';
     protected $fillable = [
         'nombre',
         'material',
