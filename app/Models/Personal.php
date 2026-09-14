@@ -17,14 +17,14 @@ class Personal extends Model
         'cargo',
         'foto_perfil',
         'grado_academico',
+        'correo',
     ];
 
-    /**
-     * Relación: Un personal puede tener muchos equipos tecnológicos asignados.
-     */
-    public function tecnologias(): HasMany
+
+    // Relación con las asignaciones que ha recibido este personal
+    public function asignaciones(): HasMany
     {
-        return $this->hasMany(Tecnologia::class);
+        return $this->hasMany(Asignaciones::class, 'personal_id');
     }
 
     /**

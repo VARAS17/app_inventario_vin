@@ -2,27 +2,25 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class tecno extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
- public function run(): void
+    public function run(): void
     {
-        DB::table('tecnologias')->insert([
-            ['id' => 1, 'nombre' => 'laptop', 'marca' => 'lenovo', 'serie' => 'Origen - DINID', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-05-22 13:12:45', 'updated_at' => '2026-07-15 11:31:01'],
-            ['id' => 2, 'nombre' => 'Celular', 'marca' => 'Galaxy A36', 'serie' => 'RFFCY30YGWBD', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:07:09', 'updated_at' => '2026-07-15 11:07:09'],
-            ['id' => 3, 'nombre' => 'GoPro', 'marca' => 'Hero', 'serie' => 'Origen Fac-Medicina', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:21:38', 'updated_at' => '2026-07-15 11:30:57'],
-            ['id' => 4, 'nombre' => 'Cámara Profesional', 'marca' => 'SONY', 'serie' => 'Origen - DINID', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:25:05', 'updated_at' => '2026-07-15 11:30:47'],
-            ['id' => 5, 'nombre' => 'Cámara', 'marca' => 'Canon', 'serie' => 'Donacón - VELT', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:26:01', 'updated_at' => '2026-07-15 11:30:42'],
-            ['id' => 6, 'nombre' => 'Scanner', 'marca' => 'EPSON', 'serie' => 'WFC5790', 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:33:15', 'updated_at' => '2026-07-15 11:55:33'],
-            ['id' => 7, 'nombre' => 'Teclado', 'marca' => 'RhinoBox', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:33:46', 'updated_at' => '2026-07-15 11:33:46'],
-            ['id' => 8, 'nombre' => 'Monitor', 'marca' => 'Teros', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:34:12', 'updated_at' => '2026-07-15 11:34:12'],
-            ['id' => 9, 'nombre' => 'Video Cámara', 'marca' => 'LOGITECH', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:36:22', 'updated_at' => '2026-07-15 11:36:39'],
+        // 1. Tus 88 datos originales
+        $datosAntiguos = [
+            ['id' => 1,  'nombre' => 'laptop', 'marca' => 'lenovo', 'serie' => 'Origen - DINID', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-05-22 13:12:45', 'updated_at' => '2026-07-15 11:31:01'],
+            ['id' => 2,  'nombre' => 'Celular', 'marca' => 'Galaxy A36', 'serie' => 'RFFCY30YGWBD', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:07:09', 'updated_at' => '2026-07-15 11:07:09'],
+            ['id' => 3,  'nombre' => 'GoPro', 'marca' => 'Hero', 'serie' => 'Origen Fac-Medicina', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:21:38', 'updated_at' => '2026-07-15 11:30:57'],
+            ['id' => 4,  'nombre' => 'Cámara Profesional', 'marca' => 'SONY', 'serie' => 'Origen - DINID', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:25:05', 'updated_at' => '2026-07-15 11:30:47'],
+            ['id' => 5,  'nombre' => 'Cámara', 'marca' => 'Canon', 'serie' => 'Donacón - VELT', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:26:01', 'updated_at' => '2026-07-15 11:30:42'],
+            ['id' => 6,  'nombre' => 'Scanner', 'marca' => 'EPSON', 'serie' => 'WFC5790', 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:33:15', 'updated_at' => '2026-07-15 11:55:33'],
+            ['id' => 7,  'nombre' => 'Teclado', 'marca' => 'RhinoBox', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:33:46', 'updated_at' => '2026-07-15 11:33:46'],
+            ['id' => 8,  'nombre' => 'Monitor', 'marca' => 'Teros', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:34:12', 'updated_at' => '2026-07-15 11:34:12'],
+            ['id' => 9,  'nombre' => 'Video Cámara', 'marca' => 'LOGITECH', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:36:22', 'updated_at' => '2026-07-15 11:36:39'],
             ['id' => 10, 'nombre' => 'CPU', 'marca' => 'Rinobox', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:38:14', 'updated_at' => '2026-07-15 11:38:14'],
             ['id' => 11, 'nombre' => 'Impresora Scanner', 'marca' => 'Epson', 'serie' => 'L5590', 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 6, 'created_at' => '2026-07-15 11:38:56', 'updated_at' => '2026-07-15 11:40:14'],
             ['id' => 12, 'nombre' => 'Impresora', 'marca' => 'Lexmar', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => 5, 'created_at' => '2026-07-15 11:54:48', 'updated_at' => '2026-07-15 11:54:48'],
@@ -69,7 +67,7 @@ class tecno extends Seeder
             ['id' => 53, 'nombre' => 'Televisor', 'marca' => 'LG', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => null, 'created_at' => '2026-07-15 13:03:13', 'updated_at' => '2026-07-15 13:03:13'],
             ['id' => 54, 'nombre' => 'Estabilizador', 'marca' => 'Elise', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => null, 'created_at' => '2026-07-15 13:03:57', 'updated_at' => '2026-07-15 13:03:57'],
             ['id' => 55, 'nombre' => 'Moden', 'marca' => 'TP-link', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => null, 'created_at' => '2026-07-15 13:04:34', 'updated_at' => '2026-07-15 13:04:34'],
-            ['id' => 56, 'nombre' => 'Impresora', 'marca' => 'lexmar', 'serie' => null, 'lugar' => 'Sala Reuniones/ropero 1', 'estado' => 'En funcionamiento', 'personal_id' => null, 'created_at' => '2026-07-15 13:05:21', 'updated_at' => '2026-07-24 11:24:55'],
+            ['id' => 56, 'nombre' => 'Impresora', 'marca' => 'lexmar', 'serie' => null, 'lugar' => 'Oficina principal', 'estado' => 'En funcionamiento', 'personal_id' => null, 'created_at' => '2026-07-15 13:05:21', 'updated_at' => '2026-07-24 11:24:55'],
             ['id' => 57, 'nombre' => 'Teclado', 'marca' => 'Vastec', 'serie' => '', 'lugar' => 'Sala de Reuniones', 'estado' => 'En funcionamiento', 'personal_id' => 9, 'created_at' => '2026-07-24 11:30:15', 'updated_at' => '2026-07-24 11:30:15'],
             ['id' => 58, 'nombre' => 'CPU', 'marca' => 'Vastec', 'serie' => '', 'lugar' => 'Sala de Reuniones', 'estado' => 'En funcionamiento', 'personal_id' => 9, 'created_at' => '2026-07-24 11:31:09', 'updated_at' => '2026-07-24 11:31:09'],
             ['id' => 59, 'nombre' => 'Monitor', 'marca' => 'HP', 'serie' => '', 'lugar' => 'Sala de Reuniones', 'estado' => 'En funcionamiento', 'personal_id' => 9, 'created_at' => '2026-07-24 11:31:25', 'updated_at' => '2026-07-24 11:31:25'],
@@ -102,6 +100,41 @@ class tecno extends Seeder
             ['id' => 86, 'nombre' => 'Tablet', 'marca' => 'Lenovo', 'serie' => '', 'lugar' => 'Almacen', 'estado' => 'Guardado', 'personal_id' => null, 'created_at' => '2026-07-24 12:39:50', 'updated_at' => '2026-07-24 12:39:50'],
             ['id' => 87, 'nombre' => 'Mouse', 'marca' => 'HP', 'serie' => '', 'lugar' => 'Almacen', 'estado' => 'Guardado', 'personal_id' => null, 'created_at' => '2026-07-24 12:40:03', 'updated_at' => '2026-07-24 12:40:03'],
             ['id' => 88, 'nombre' => 'Mouse', 'marca' => 'Genius', 'serie' => '', 'lugar' => 'Almacen', 'estado' => 'Guardado', 'personal_id' => null, 'created_at' => '2026-07-24 12:40:13', 'updated_at' => '2026-07-24 12:40:13'],
-        ]);
+        ];
+
+        // 2. Mapeo y transformación automática a la estructura actual
+        $datosNuevos = collect($datosAntiguos)->map(function ($item) {
+            
+            // Correlativo UNT-VIN-0001 al UNT-VIN-0088
+            $codigoVin = 'UNT-VIN-' . str_pad($item['id'], 4, '0', STR_PAD_LEFT);
+
+            // Mapeo inteligente del enum ['Disponible', 'Asignado', 'En Mantenimiento']
+            $estado = match ($item['estado']) {
+                'Reparacion' => 'Disponible',
+                'Guardado'   => 'Disponible',
+                'En funcionamiento' => !empty($item['personal_id']) ? 'Disponible' : 'Disponible',
+                default      => 'Disponible',
+            };
+
+            // Extracción de YYYY-MM-DD
+            $fechaIngreso = Carbon::parse($item['created_at'])->toDateString();
+
+            return [
+                'id'            => $item['id'],
+                'codigo_vin'    => $codigoVin,
+                'nombre'        => $item['nombre'],
+                'marca'         => $item['marca'],
+                'serie'         => !empty($item['serie']) ? $item['serie'] : null,
+                'estado'        => $estado,
+                'fecha_ingreso' => $fechaIngreso,
+                'proveedor'     => 'Inventario Inicial',
+                'foto'          => '', // Vacío por ahora, o 'tecnologias/default.png'
+                'created_at'    => $item['created_at'],
+                'updated_at'    => $item['updated_at'],
+            ];
+        })->toArray();
+
+        // 3. Inserción directa en la base de datos
+        DB::table('tecnologias')->insert($datosNuevos);
     }
 }

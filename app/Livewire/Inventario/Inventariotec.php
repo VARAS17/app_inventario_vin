@@ -5,229 +5,282 @@ namespace App\Livewire\Inventario;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
-use Livewire\WithPagination; // 1. Importar el Trait
+use Livewire\WithPagination;
 use App\Models\Tecnologia;
-use App\Models\Personal;
-use App\Models\Debaja; 
+use App\Models\tecnologias_archivos;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class Inventariotec extends Component
 {
     use WithFileUploads;
-    use WithPagination; // 2. Usar el Trait dentro de la clase
+    use WithPagination;
 
     #[Layout('layouts.app')]
 
-    // Propiedades del formulario
-    public $nombre, $marca, $serie, $estado = 'En funcionamiento', $lugar = 'Oficina principal', $personal_id, $equipo_id;
-    public $imagen; 
-    public $imagen_actual; 
-    
-    // Propiedades de Búsqueda y Filtros
-    public $search = ''; 
-    public $filterPersonal = ''; 
-    public $filterLugar = '';    
-    
-    public $isOpen = false;
+    public string $search = '';
+    protected int $perPage = 8;
 
-    // 3. Resetear la paginación automáticamente cuando cambian los filtros
-    public function updatingSearch() { $this->resetPage(); }
-    public function updatingFilterPersonal() { $this->resetPage(); }
-    public function updatingFilterLugar() { $this->resetPage(); }
+    // Item seleccionado (con sus archivos cargados)
+    public ?int $selectedId = null;
+    public ?Tecnologia $selectedTecnologia = null;
 
-    protected function rules()
+    // Control del Modal
+    public bool $isOpenModal = false;
+    public bool $isEditMode = false;
+    public ?int $tecnologia_id = null;
+
+    // Campos del Formulario
+    public string $codigo_vin = '';
+    public string $nombre = '';
+    public string $marca = '';
+    public ?string $serie = null;
+    public string $estado = 'Disponible';
+    public string $fecha_ingreso = '';
+    public string $proveedor = '';
+    public $foto = null;
+    public ?string $foto_existente = null;
+
+    // PROPIEDADES PARA MÚLTIPLES PDFS
+    public array $nuevos_archivos = [];        // [['nombre' => '', 'archivo' => null], ...]
+    public $archivos_existentes = [];          // Colección al editar
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    protected function rules(): array
     {
         return [
-            'nombre' => 'required|min:3',
-            'marca' => 'required',
-            'serie' => 'nullable',
-            'estado' => 'required|in:En funcionamiento,Guardado,En Mantenimiento,Reparacion,Dar de Baja',
-            'lugar' => 'required',
-            'personal_id' => 'nullable|exists:personal,id',
-            'imagen' => 'nullable|image|max:2048',
+            'codigo_vin' => [
+                'required',
+                'string',
+                Rule::unique('tecnologias', 'codigo_vin')->ignore($this->tecnologia_id),
+            ],
+            'nombre'        => 'required|string|max:150',
+            'marca'         => 'required|string|max:100',
+            'serie'         => 'nullable|string|max:100',
+            'estado'        => ['required', Rule::in(['Disponible', 'Asignado', 'En Mantenimiento'])],
+            'fecha_ingreso' => 'required|date',
+            'proveedor'     => 'required|string|max:150',
+            'foto'          => $this->isEditMode 
+                                ? 'nullable|image|max:5120' 
+                                : 'required|image|max:5120',
+            // Reglas para los PDFs que se agreguen
+            'nuevos_archivos.*.nombre'  => 'required|string|max:150',
+            'nuevos_archivos.*.archivo' => 'required|file|mimes:pdf|max:10240', // Máx 10MB c/u
         ];
     }
 
-    /**
-     * Renderiza la vista con los datos paginados
-     */
-    public function render()
-    {
-        return view('livewire.inventario.inventariotec', [
-            'equipos' => $this->getFilteredQuery()->latest()->paginate(10), 
-            'personales' => Personal::all(),
-            'lugaresDisponibles' => Tecnologia::select('lugar')->distinct()->pluck('lugar')
-        ]);
-    }
+    protected $messages = [
+        'codigo_vin.required' => 'El código VIN es obligatorio.',
+        'codigo_vin.unique'   => 'Este código VIN ya está registrado.',
+        'nombre.required'     => 'El nombre del equipo es obligatorio.',
+        'marca.required'      => 'La marca es obligatoria.',
+        'estado.required'     => 'Selecciona un estado válido.',
+        'fecha_ingreso.date'  => 'Ingresa una fecha de ingreso válida.',
+        'foto.required'       => 'Debes adjuntar una foto del equipo.',
+        'foto.image'          => 'El archivo debe ser una imagen válida.',
+        'foto.max'            => 'La imagen no debe superar los 5MB.',
+        'nuevos_archivos.*.nombre.required'  => 'El nombre del documento es obligatorio.',
+        'nuevos_archivos.*.archivo.required' => 'Debes adjuntar el archivo PDF.',
+        'nuevos_archivos.*.archivo.mimes'    => 'El documento debe ser exclusivamente formato PDF.',
+        'nuevos_archivos.*.archivo.max'      => 'El PDF no debe superar los 10MB.',
+    ];
 
     /**
-     * Lógica de consulta compartida para render y exportación
+     * Métodos para la gestión dinámica de PDFs en el Formulario
      */
-    public function getFilteredQuery()
+    public function addArchivoInput(): void
     {
-        return Tecnologia::with('personal')
-            ->when($this->search, function($query) {
-                $query->where(function($q) {
-                    $searchTerm = '%' . $this->search . '%';
-                    $q->where('nombre', 'like', $searchTerm)
-                      ->orWhere('marca', 'like', $searchTerm)
-                      ->orWhere('serie', 'like', $searchTerm);
-                });
-            })
-            ->when($this->filterPersonal, function($query) {
-                $query->where('personal_id', $this->filterPersonal);
-            })
-            ->when($this->filterLugar, function($query) {
-                $query->where('lugar', $this->filterLugar);
-            });
+        $this->nuevos_archivos[] = ['nombre' => '', 'archivo' => null];
     }
 
-    public function crear()
+    public function removeArchivoInput(int $index): void
     {
-        $this->resetInputFields();
-        $this->openModal();
+        unset($this->nuevos_archivos[$index]);
+        $this->nuevos_archivos = array_values($this->nuevos_archivos);
     }
 
-    public function editar($id)
+    public function eliminarArchivoExistente(int $archivoId): void
     {
-        $equipo = Tecnologia::findOrFail($id);
-        $this->equipo_id = $id;
-        $this->nombre = $equipo->nombre;
-        $this->marca = $equipo->marca;
-        $this->serie = $equipo->serie;
-        $this->estado = $equipo->estado;
-        $this->lugar = $equipo->lugar; 
-        $this->personal_id = $equipo->personal_id;
-        $this->imagen_actual = $equipo->imagen; 
+        $doc = tecnologias_archivos::findOrFail($archivoId);
+        
+        // Borrar el archivo físico del disco interno
+        if (Storage::disk('local')->exists($doc->ruta_archivo)) {
+            Storage::disk('local')->delete($doc->ruta_archivo);
+        }
+        
+        $doc->delete();
+        
+        // Refrescar lista de archivos existentes en el modal
+        $this->archivos_existentes = tecnologias_archivos::where('tecnologia_id', $this->tecnologia_id)->get();
 
-        $this->openModal();
+        // Si este equipo estaba seleccionado abajo, refrescar su detalle
+        if ($this->selectedId === $this->tecnologia_id) {
+            $this->selectedTecnologia->load('archivos');
+        }
     }
 
-    public function guardar()
+    /**
+     * Cargar equipo seleccionado con sus archivos adjuntos
+     */
+    public function selectItem(int $id): void
     {
-        $this->validate();
+        $this->selectedId = $id;
+        $this->selectedTecnologia = Tecnologia::with('archivos')->find($id);
+    }
 
-        DB::transaction(function () {
-            if ($this->estado === 'Dar de Baja') {
-                // --- CASO: MOVER A LA TABLA DE BAJAS ---
-                $rutaImagen = $this->imagen_actual;
-                if ($this->imagen) {
-                    $rutaImagen = $this->imagen->store('tecnologia', 'local');
+    public function openCreateModal(): void
+    {
+        $this->resetForm();
+        $this->isEditMode = false;
+        $this->codigo_vin = Tecnologia::generarSiguienteCodigoVin();
+        $this->fecha_ingreso = now()->format('Y-m-d');
+        $this->isOpenModal = true;
+    }
+
+    public function openEditModal(int $id): void
+    {
+        $this->resetForm();
+        $this->isEditMode = true;
+
+        $tec = Tecnologia::with('archivos')->findOrFail($id);
+        $this->tecnologia_id       = $tec->id;
+        $this->codigo_vin          = $tec->codigo_vin;
+        $this->nombre              = $tec->nombre;
+        $this->marca               = $tec->marca;
+        $this->serie               = $tec->serie;
+        $this->estado              = $tec->estado;
+        $this->fecha_ingreso       = $tec->fecha_ingreso 
+            ? Carbon::parse($tec->fecha_ingreso)->format('Y-m-d') 
+            : '';
+        $this->proveedor           = $tec->proveedor;
+        $this->foto_existente      = $tec->foto;
+        $this->archivos_existentes = $tec->archivos;
+
+        $this->isOpenModal = true;
+    }
+
+    public function save(): void
+    {
+        $validatedData = $this->validate();
+
+        if ($this->isEditMode) {
+            $tecnologia = Tecnologia::findOrFail($this->tecnologia_id);
+
+            if ($this->foto) {
+                if ($tecnologia->foto && Storage::disk('local')->exists($tecnologia->foto)) {
+                    Storage::disk('local')->delete($tecnologia->foto);
                 }
-
-                Debaja::create([
-                    'nombre'          => $this->nombre,
-                    'tipo_inventario' => 'Tecnología',
-                    'motivo'          => 'Dar de Baja',
-                    'fecha_baja'      => now(),
-                    'personal_id'     => $this->personal_id ?: null,
-                    'imagen'          => $rutaImagen,
-                    'detalles'        => [
-                        'marca' => $this->marca,
-                        'serie' => $this->serie,
-                        'lugar' => $this->lugar,
-                    ],
-                ]);
-
-                // Si existía en la tabla activa, lo borramos
-                if ($this->equipo_id) {
-                    $equipoActivo = Tecnologia::find($this->equipo_id);
-                    if ($equipoActivo) $equipoActivo->delete();
-                }
-
-                $msg = 'Equipo tecnológico movido al historial de bajas.';
+                $validatedData['foto'] = $this->foto->store('tecnologias', 'local');
             } else {
-                // --- CASO: REGISTRO O ACTUALIZACIÓN NORMAL ---
-                $datos = [
-                    'nombre'      => $this->nombre,
-                    'marca'       => $this->marca,
-                    'serie'       => $this->serie,
-                    'estado'      => $this->estado,
-                    'lugar'       => $this->lugar,
-                    'personal_id' => $this->personal_id ?: null,
-                ];
-
-                if ($this->imagen) {
-                    // Borrar imagen anterior si existe
-                    if ($this->equipo_id && $this->imagen_actual) {
-                        Storage::disk('local')->delete($this->imagen_actual);
-                    }
-                    $datos['imagen'] = $this->imagen->store('tecnologia', 'local');
-                }
-
-                Tecnologia::updateOrCreate(['id' => $this->equipo_id], $datos);
-                $msg = $this->equipo_id ? 'Equipo actualizado correctamente' : 'Equipo registrado con éxito';
+                unset($validatedData['foto']);
             }
 
-            $this->dispatch('mueble-guardado', msg: $msg);
-            $this->closeModal();
-        });
-    }
+            $tecnologia->update($validatedData);
+            session()->flash('message', 'Equipo tecnológico actualizado exitosamente.');
+        } else {
+            $validatedData['foto'] = $this->foto->store('tecnologias', 'local');
+            $tecnologia = Tecnologia::create($validatedData);
 
-    public function eliminar($id)
-    {
-        $equipo = Tecnologia::find($id);
-        if ($equipo) {
-            if ($equipo->imagen) {
-                Storage::disk('local')->delete($equipo->imagen);
-            }
-            $equipo->delete();
+            session()->flash('message', 'Equipo registrado con código: ' . $tecnologia->codigo_vin);
         }
 
-        $this->dispatch('mueble-guardado', msg: 'Equipo eliminado permanentemente');
-    }
-
-    public function openModal() { $this->isOpen = true; }
-    
-    public function closeModal() { 
-        $this->isOpen = false; 
-        $this->resetInputFields();
-    }
-
-    private function resetInputFields() {
-        $this->nombre = ''; 
-        $this->marca = ''; 
-        $this->serie = '';
-        $this->estado = 'En funcionamiento'; 
-        $this->lugar = 'Oficina principal'; 
-        $this->personal_id = ''; 
-        $this->equipo_id = '';
-        $this->imagen = null;
-        $this->imagen_actual = null;
-    }
-
-    public function exportar()
-    {
-        // En exportación usamos ->get() para obtener todos los registros filtrados
-        $equipos = $this->getFilteredQuery()->get();
-
-        $filename = 'reporte_inventario_tecno_' . date('Y-m-d_H-i-s') . '.csv';
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ];
-
-        $callback = function() use ($equipos) {
-            $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8 para Excel
-            fputcsv($file, ['Nombre', 'Marca', 'Serie', 'Estado', 'Lugar', 'Asignado a'], ';');
-            
-            foreach ($equipos as $equipo) {
-                fputcsv($file, [
-                    $equipo->nombre,
-                    $equipo->marca,
-                    $equipo->serie ?? 'S/N',
-                    $equipo->estado,
-                    $equipo->lugar,
-                    $equipo->personal 
-                        ? $equipo->personal->nombre . ' ' . $equipo->personal->apellido 
-                        : 'Sin asignar',
-                ], ';');
+        // GUARDAR LOS NUEVOS PDFs SUBIDOS
+        if (!empty($this->nuevos_archivos)) {
+            foreach ($this->nuevos_archivos as $item) {
+                if (isset($item['archivo']) && $item['archivo']) {
+                    $rutaPdf = $item['archivo']->store('tecnologias_archivos', 'local');
+                    
+                    tecnologias_archivos::create([
+                        'nombre_archivo'        => $item['nombre'],
+                        'ruta_archivo'  => $rutaPdf,
+                        'tecnologia_id' => $tecnologia->id,
+                    ]);
+                }
             }
-            fclose($file);
-        };
+        }
 
-        return response()->stream($callback, 200, $headers);
+        // Refrescar el panel inferior si estaba seleccionado
+        if ($this->selectedId === $tecnologia->id) {
+            $this->selectedTecnologia = Tecnologia::with('archivos')->find($this->selectedId);
+        }
+
+        $this->closeModal();
+    }
+
+    public function delete(int $id): void
+    {
+        $tecnologia = Tecnologia::with('archivos')->findOrFail($id);
+
+        // 1. Borrar la foto del disco
+        if ($tecnologia->foto && Storage::disk('local')->exists($tecnologia->foto)) {
+            Storage::disk('local')->delete($tecnologia->foto);
+        }
+
+        // 2. Borrar físicamente todos los PDFs vinculados en el disco
+        foreach ($tecnologia->archivos as $archivo) {
+            if (Storage::disk('local')->exists($archivo->ruta_archivo)) {
+                Storage::disk('local')->delete($archivo->ruta_archivo);
+            }
+        }
+
+        $tecnologia->delete();
+
+        if ($this->selectedId === $id) {
+            $this->selectedId = null;
+            $this->selectedTecnologia = null;
+        }
+
+        session()->flash('message', 'Registro y archivos eliminados correctamente.');
+    }
+
+    public function closeModal(): void
+    {
+        $this->resetForm();
+        $this->isOpenModal = false;
+    }
+
+    private function resetForm(): void
+    {
+        $this->reset([
+            'tecnologia_id',
+            'codigo_vin',
+            'nombre',
+            'marca',
+            'serie',
+            'estado',
+            'fecha_ingreso',
+            'proveedor',
+            'foto',
+            'foto_existente',
+            'nuevos_archivos',
+            'archivos_existentes'
+        ]);
+        $this->resetValidation();
+    }
+
+    public function render()
+    {
+        $tecnologias = Tecnologia::query()
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('codigo_vin', 'like', '%' . $this->search . '%')
+                      ->orWhere('nombre', 'like', '%' . $this->search . '%')
+                      ->orWhere('marca', 'like', '%' . $this->search . '%')
+                      ->orWhere('serie', 'like', '%' . $this->search . '%')
+                      ->orWhere('proveedor', 'like', '%' . $this->search . '%')
+                      ->orWhere('estado', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->orderBy('id', 'asc')
+            ->paginate($this->perPage);
+
+        return view('livewire.inventario.inventariotec', [
+            'tecnologias' => $tecnologias
+        ]);
     }
 }

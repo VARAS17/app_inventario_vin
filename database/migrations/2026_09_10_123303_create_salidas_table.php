@@ -11,15 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('personal', function (Blueprint $table) {
+        Schema::create('salidas', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
             $table->string('nombre');
-            $table->string('apellido');
-            $table->string('cargo');
-            // 'nullable' permite que el campo quede vacío si aún no hay foto
-            $table->string('foto_perfil')->nullable(); 
-            $table->string('grado_academico');
-            $table->string('correo')->nullable();
+            $table->string('area_destino');
+            $table->string('responsable');
+            $table->date('fecha_salida');
             $table->timestamps();
         });
     }
@@ -29,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('personal');
+        Schema::dropIfExists('salidas');
     }
 };
