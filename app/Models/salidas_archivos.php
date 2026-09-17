@@ -13,7 +13,7 @@ class salidas_archivos extends Model
     //
     protected $table = 'salidas_archivos';
     protected $fillable = [
-        'salidas_id',
+        'salida_id',
         'nombre_archivo',
         'ruta_archivo',
     ];

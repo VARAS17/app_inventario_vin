@@ -14,7 +14,7 @@ class asignaciones_archivos extends Model
     //
     protected $table = 'asignaciones_archivos';
     protected $fillable = [
-        'asginacion_id',
+        'asignacion_id',
         'nombre_archivo',
         'ruta_archivo',
     ];

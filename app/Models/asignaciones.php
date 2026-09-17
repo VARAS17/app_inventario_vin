@@ -18,7 +18,7 @@ class asignaciones extends Model
         'personal_id',
         'area_origen',
         'area_destino',
-        'fecha_prestamo'
+        'fecha_traspaso'
     ];
 
     public function tecnologia(): BelongsTo

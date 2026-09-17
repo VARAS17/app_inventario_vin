@@ -16,7 +16,7 @@ class salidas extends Model
     protected $table = 'salidas';
     protected $fillable = [
         'tecnologia_id',
-        'nombre',
+        'motivo',
         'area_destino',
         'responsable',
         'fecha_salida'

@@ -16,8 +16,11 @@ return new class extends Migration
             $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
             $table->enum('area_origen',['TI','Administracion','Imagen','Mesa de partes','Secretaría','Despacho Vicerrectoral']);
             $table->string('area_destino');
+            $table->string('responsable')->nullable();
             $table->date('fecha_prestamo');
-            $table->date('fecha_devolucion');
+            $table->date('fecha_devolucion_pactada');
+            $table->date('fecha_devolucion_real')->nullable();
+            $table->string('estado_previo');    
             $table->timestamps();
         });
     }

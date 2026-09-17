@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('mantenimiento_archivos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('mantenimiento_id')->nullable()->constrained('mantenimientos')->onDelete('cascade');
+            $table->foreignId('mantenimiento_id')->constrained('mantenimientos')->onDelete('cascade');
             $table->string('nombre_archivo');
             $table->string('ruta_archivo');
 

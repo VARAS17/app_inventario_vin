@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('salidas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
-            $table->string('nombre');
+            $table->string('motivo');
             $table->string('area_destino');
             $table->string('responsable');
             $table->date('fecha_salida');

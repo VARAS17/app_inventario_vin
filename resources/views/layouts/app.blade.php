@@ -61,10 +61,16 @@
                 </a>
                 
                 {{-- MENU DESPLEGABLE: EQUIPO TECNOLOGICO --}}
+                @php
+                    // Definimos las rutas hijas para verificar si alguna está activa
+                    $rutasTec = ['inventariotec', 'trasnferencia-tec', 'prestamo-tec', 'salida-tec', 'mantenimiento-tec'];
+                    $isTecActive = request()->routeIs($rutasTec);
+                @endphp
+
                 <div class="space-y-0.5">
                     <button type="button" 
                             id="btnTecnologico"
-                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 focus:outline-none">
+                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isTecActive ? 'text-blue-600 bg-blue-50/60 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                         <div class="flex items-center gap-2.5">
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
@@ -72,17 +78,39 @@
                             </svg>
                             <span>Equipo Tecnológico</span>
                         </div>
-                        <svg id="arrowTec" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <!-- Si está activo, la flecha se queda girada -->
+                        <svg id="arrowTec" class="w-4 h-4 transition-transform duration-200 {{ $isTecActive ? 'rotate-180 text-blue-600' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    <div id="menuTecnologico" class="hidden flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
-                        <a href="{{ route('inventariotec') }}" class="block px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 rounded-md hover:bg-gray-50">Ver Todo</a>
-                        <a href="{{ route('trasnferencia-tec') }}" class="block px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 rounded-md hover:bg-gray-50">Transferencia</a>
-                        <a href="{{ route('prestamo-tec') }}" class="block px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 rounded-md hover:bg-gray-50">Prestamo</a>
-                        <a href="{{ route('salida-tec') }}" class="block px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 rounded-md hover:bg-gray-50">Salida</a>
-                        <a href="{{ route('mantenimiento-tec') }}" class="block px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 rounded-md hover:bg-gray-50">Mantenimiento</a>
+                    <!-- Si está activo, se quita la clase 'hidden' y se pone 'flex' -->
+                    <div id="menuTecnologico" class="{{ $isTecActive ? 'flex' : 'hidden' }} flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
+                        
+                        <a href="{{ route('inventariotec') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventariotec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Ver Todo
+                        </a>
+
+                        <a href="{{ route('trasnferencia-tec') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trasnferencia-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Transferencia
+                        </a>
+
+                        <a href="{{ route('prestamo-tec') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('prestamo-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Prestamo
+                        </a>
+
+                        <a href="{{ route('salida-tec') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('salida-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Salida
+                        </a>
+
+                        <a href="{{ route('mantenimiento-tec') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('mantenimiento-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Mantenimiento
+                        </a>
                     </div>
                 </div>
 

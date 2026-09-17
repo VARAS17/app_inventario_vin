@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('marca');  // Solicitado: marca
             $table->string('serie')->nullable();
             // Estado solicitado: en funcionamiento, guardado, malogrado
-            $table->enum('estado', ['Disponible', 'Asignado', 'En Mantenimiento'])
+            $table->enum('estado', ['Disponible', 'Asignado', 'Prestado','En Mantenimiento', 'De baja'])
                 ->default('Disponible');
             $table->date('fecha_ingreso');
             $table->string('proveedor');

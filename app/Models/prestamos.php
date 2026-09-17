@@ -14,11 +14,14 @@ class prestamos extends Model
     protected $table= 'prestamos';
 
     protected $fillable = [
-        'tecnologias_id',
+        'tecnologia_id',
         'area_origen',
         'area_destino',
+        'responsable',
         'fecha_prestamo',
-        'fecha_devolucion',
+        'fecha_devolucion_pactada',
+        'fecha_devolucion_real',
+        'estado_previo',
     ];
 
     public function tecnologia(): BelongsTo

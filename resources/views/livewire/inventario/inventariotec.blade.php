@@ -84,8 +84,16 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                                         ● Asignado
                                     </span>
-                                @else
+                                @elseif($tec->estado === 'Prestado')
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                        ● Prestado
+                                    </span>
+                                @elseif($tec->estado === 'De baja')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                        ● Dado de baja
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-slate-200">
                                         ● Mantenimiento
                                     </span>
                                 @endif
@@ -347,7 +355,9 @@
                                 class="w-full border border-slate-300 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden">
                                 <option value="Disponible">Disponible</option>
                                 <option value="Asignado">Asignado</option>
+                                <option value="Prestado">Prestado</option>
                                 <option value="En Mantenimiento">En Mantenimiento</option>
+                                <option value="De baja">De baja</option>
                             </select>
                             @error('estado') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                         </div>

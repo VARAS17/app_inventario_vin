@@ -62,7 +62,7 @@ class Inventariotec extends Component
             'nombre'        => 'required|string|max:150',
             'marca'         => 'required|string|max:100',
             'serie'         => 'nullable|string|max:100',
-            'estado'        => ['required', Rule::in(['Disponible', 'Asignado', 'En Mantenimiento'])],
+            'estado'        => ['required', Rule::in(['Disponible', 'Asignado', 'Prestado','En Mantenimiento','De baja'])],
             'fecha_ingreso' => 'required|date',
             'proveedor'     => 'required|string|max:150',
             'foto'          => $this->isEditMode 

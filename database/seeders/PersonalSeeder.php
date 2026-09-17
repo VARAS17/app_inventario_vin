@@ -16,7 +16,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'TI de VIN',
                 'grado_academico' => 'Bachiller',
                 'foto_perfil' => null,
-                'correo'=>null
+                'correo'=>'jmoyar@unitru.edu.pe'
             ],
             [
                 'nombre' => 'Erika',
@@ -24,7 +24,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Admin de VIN',
                 'grado_academico' => 'Técnica',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'ediazr@unitru.edu.pe'
 
             ],
             [
@@ -33,7 +33,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Locadora',
                 'grado_academico' => 'Bachiller',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'t510100620@unitru.edu.pe'
 
             ],
             [
@@ -42,7 +42,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Practicante',
                 'grado_academico' => 'Bachiller',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'jvarasq@unitru.edu.pe'
 
             ],
             [
@@ -51,7 +51,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Mesa de parte VIN',
                 'grado_academico' => 'Técnico',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'fceli@unitru.edu.pe'
 
             ],
             [
@@ -60,7 +60,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Secretaria VIN',
                 'grado_academico' => 'Licenciada',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'mmparedes@unitru.edu.pe'
 
             ],
             [
@@ -78,7 +78,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Asesor VIN',
                 'grado_academico' => 'Licenciado',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'vcastro@unitru.edu.pe'
 
             ],
             [
@@ -87,7 +87,7 @@ class PersonalSeeder extends Seeder
                 'cargo' => 'Vicerrector de Investigación',
                 'grado_academico' => 'Doctor',
                 'foto_perfil' => null,
-                                'correo'=>null
+                'correo'=>'vlau@unitru.edu.pe'
 
             ],
         ];
