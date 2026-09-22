@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+        area::class,
         PersonalSeeder::class,
         tecno::class,
         //DebajaSeeder::class,

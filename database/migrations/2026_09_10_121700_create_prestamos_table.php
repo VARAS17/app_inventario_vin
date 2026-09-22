@@ -14,13 +14,14 @@ return new class extends Migration
         Schema::create('prestamos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
-            $table->enum('area_origen',['TI','Administracion','Imagen','Mesa de partes','Secretaría','Despacho Vicerrectoral']);
-            $table->string('area_destino');
-            $table->string('responsable')->nullable();
+            $table->foreignId('area_origen_id')->constrained('areas')->onDelete('cascade'); // <-- Enlazado a áreas
+            $table->string('area_destino');      // Destino externo o evento
+            $table->string('responsable')->nullable(); // Persona externa
             $table->date('fecha_prestamo');
             $table->date('fecha_devolucion_pactada');
             $table->date('fecha_devolucion_real')->nullable();
-            $table->string('estado_previo');    
+            $table->string('estado_previo')->nullable(); 
+            $table->text('observacion_devolucion')->nullable(); // Opcional para la trazabilidad del retorno
             $table->timestamps();
         });
     }

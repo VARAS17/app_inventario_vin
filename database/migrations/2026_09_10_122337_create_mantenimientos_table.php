@@ -14,10 +14,20 @@ return new class extends Migration
         Schema::create('mantenimientos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
-            $table->enum('area_origen',['TI','Administracion','Imagen','Mesa de partes','Secretaría','Despacho Vicerrectoral']);
+            $table->foreignId('area_origen_id')->constrained('areas')->onDelete('cascade'); // Origen estandarizado
+            
+            // Salida a mantenimiento
+            $table->enum('tipo', ['Preventivo', 'Correctivo'])->default('Correctivo');
+            $table->string('taller_proveedor')->nullable(); // Quién lo repara
+            $table->string('motivo');                      // Falla reportada
             $table->date('fecha_envio');
-            $table->date('fecha_ingreso')->nullable();
-            $table->string('motivo');
+            $table->string('estado_previo')->nullable();   // Disponible o Asignado
+
+            // Retorno de mantenimiento
+            $table->date('fecha_ingreso')->nullable();     // Fecha real de retorno
+            $table->text('solucion')->nullable();          // Qué trabajo se realizó
+            $table->boolean('quedo_operativo')->default(true); // true = Vuelve a circular | false = Irreparable (De baja)
+            
             $table->timestamps();
         });
     }

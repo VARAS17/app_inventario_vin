@@ -10,8 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Tecnologia;
 use App\Models\Personal;
+use App\Models\Area;
 use App\Models\asignaciones as Asignacion;
 use App\Models\asignaciones_archivos as AsignacionArchivo;
+use Carbon\Carbon;
+
 
 class TrasnferenciaTEC extends Component
 {
@@ -19,10 +22,11 @@ class TrasnferenciaTEC extends Component
 
     #[Layout('layouts.app')]
 
-    // Buscadores reactivos
+    // Buscadores reactivos y Filtro de Estado
     public string $searchTecnologia = '';
     public string $searchPersonal = '';
     public string $searchHistorial = '';
+    public string $filtroEstado = 'activas'; // 'activas' | 'baja' | 'todas'
 
     // Estado del Formulario / CRUD
     public bool $isEditing = false;
@@ -38,74 +42,84 @@ class TrasnferenciaTEC extends Component
     public ?Tecnologia $tecnologiaSeleccionada = null;
     public ?Personal $personalSeleccionado = null;
 
-    // Campos del formulario
+    // Campos del formulario con Claves Foráneas
     public ?int $tecnologia_id = null;
     public ?int $personal_id = null;
-    public string $area_origen = 'VIN';
-    public string $area_destino = '';
+    public ?int $area_origen_id = null;
+    public ?int $area_destino_id = null;
     public string $fecha_traspaso = '';
 
     // Gestión de Archivos
-    public array $nuevosArchivos = []; // Receptor del input file (+)
-    public array $archivos = [];       // Archivos temporales acumulados
-    public $archivosExistentes = [];   // Archivos guardados en BD durante edición
+    public array $nuevosArchivos = [];
+    public array $archivos = [];
+    public $archivosExistentes = [];
 
     // Previsualizador modal de archivos
     public bool $mostrarModalPreview = false;
     public ?string $previewSrc = null;
     public ?string $previewNombre = null;
-    public ?string $previewTipo = null; // 'imagen' | 'pdf' | 'otro'
+    public ?string $previewTipo = null;
 
-    // Opciones del Enum
-    public const AREAS_DESTINO = [
-        'TI',
-        'Administracion',
-        'Imagen',
-        'Mesa de partes',
-        'Secretaría',
-        'Despacho Vicerrectoral'
-    ];
+    public function updatingSearchHistorial(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFiltroEstado(): void
+    {
+        $this->resetPage();
+    }
 
     protected function rules(): array
     {
         return [
             'tecnologia_id'   => 'required|exists:tecnologias,id',
             'personal_id'     => 'nullable|exists:personal,id',
-            'area_origen'     => 'required|in:VIN',
-            'area_destino'    => 'required|in:' . implode(',', self::AREAS_DESTINO),
+            'area_origen_id'  => 'nullable|exists:areas,id',
+            'area_destino_id' => 'required|exists:areas,id',
             'fecha_traspaso'  => 'required|date',
-            'archivos.*'      => 'nullable|file|max:15360', // Máx 15MB por archivo
+            'archivos.*'      => 'nullable|file|max:15360',
         ];
     }
 
     protected $messages = [
-        'tecnologia_id.required'  => 'Debe seleccionar un activo tecnológico disponible.',
-        'area_destino.required'   => 'Debe seleccionar un área de destino válida.',
-        'fecha_traspaso.required' => 'La fecha del traspaso es obligatoria.',
-        'archivos.*.max'          => 'Cada archivo adjunto no debe superar los 15MB.',
+        'tecnologia_id.required'   => 'Debe seleccionar un activo tecnológico.',
+        'area_destino_id.required' => 'Debe seleccionar un área de destino válida.',
+        'area_destino_id.exists'   => 'El área de destino seleccionada no existe.',
+        'fecha_traspaso.required'  => 'La fecha del traspaso es obligatoria.',
+        'archivos.*.max'           => 'Cada archivo adjunto no debe superar los 15MB.',
     ];
 
     public function mount(): void
     {
         $this->fecha_traspaso = now()->toDateString();
 
-        // Seleccionar por defecto la primera asignación para el panel inferior
+        $areaAlmacen = Area::where('nombre', 'ALMACEN')->first() ?? Area::first();
+        if ($areaAlmacen) {
+            $this->area_origen_id = $areaAlmacen->id;
+        }
+
         $primera = Asignacion::latest('id')->first();
         if ($primera) {
             $this->asignacionSeleccionadaId = $primera->id;
         }
     }
 
-    // =========================================================================
-    // MASTER-DETAIL: SELECCIÓN DE FILA EN TABLA
-    // =========================================================================
+    public function updatedAreaDestinoId(): void
+    {
+        if ($this->personalSeleccionado && $this->personalSeleccionado->area_id != $this->area_destino_id) {
+            $this->deseleccionarPersonal();
+        }
+        $this->searchPersonal = '';
+    }
+
     public function seleccionarParaDetalle(int $id): void
     {
         $this->asignacionSeleccionadaId = $id;
     }
 
     // =========================================================================
-    // SELECCIÓN DE ACTIVOS Y PERSONAL EN MODAL
+    // SELECCIÓN CON DETECCIÓN INTELIGENTE DE ORIGEN
     // =========================================================================
     public function seleccionarTecnologia(int $id): void
     {
@@ -113,6 +127,19 @@ class TrasnferenciaTEC extends Component
         if ($this->tecnologiaSeleccionada) {
             $this->tecnologia_id = $this->tecnologiaSeleccionada->id;
             $this->searchTecnologia = '';
+
+            if ($this->tecnologiaSeleccionada->estado === 'Disponible') {
+                $areaAlmacen = Area::where('nombre', 'ALMACEN')->first() ?? Area::first();
+                $this->area_origen_id = $areaAlmacen?->id;
+            } elseif ($this->tecnologiaSeleccionada->estado === 'Asignado') {
+                $ultimaAsignacion = Asignacion::where('tecnologia_id', $this->tecnologia_id)
+                    ->latest('id')
+                    ->first();
+
+                if ($ultimaAsignacion && $ultimaAsignacion->area_destino_id) {
+                    $this->area_origen_id = $ultimaAsignacion->area_destino_id;
+                }
+            }
         }
     }
 
@@ -120,6 +147,8 @@ class TrasnferenciaTEC extends Component
     {
         $this->tecnologiaSeleccionada = null;
         $this->tecnologia_id = null;
+        $areaAlmacen = Area::where('nombre', 'ALMACEN')->first() ?? Area::first();
+        $this->area_origen_id = $areaAlmacen?->id;
     }
 
     public function seleccionarPersonal(int $id): void
@@ -138,18 +167,14 @@ class TrasnferenciaTEC extends Component
     }
 
     // =========================================================================
-    // GESTIÓN DE ARCHIVOS CON BOTÓN "+" Y ACUMULACIÓN
+    // GESTIÓN DE ARCHIVOS CON BOTÓN "+"
     // =========================================================================
     public function updatedNuevosArchivos(): void
     {
-        $this->validate([
-            'nuevosArchivos.*' => 'file|max:15360',
-        ]);
-
+        $this->validate(['nuevosArchivos.*' => 'file|max:15360']);
         foreach ($this->nuevosArchivos as $nuevo) {
             $this->archivos[] = $nuevo;
         }
-
         $this->nuevosArchivos = [];
     }
 
@@ -172,7 +197,7 @@ class TrasnferenciaTEC extends Component
     }
 
     // =========================================================================
-    // PREVISUALIZACIÓN DE ARCHIVOS
+    // PREVISUALIZADOR DE ARCHIVOS (BASE64)
     // =========================================================================
     public function previsualizarArchivoNuevo(int $index): void
     {
@@ -228,7 +253,7 @@ class TrasnferenciaTEC extends Component
     }
 
     // =========================================================================
-    // OPERACIONES CRUD (GESTIÓN DE ESTADOS DISPONIBLE / ASIGNADO)
+    // OPERACIONES CRUD (AUDITORÍA HISTÓRICA)
     // =========================================================================
     public function abrirModal(): void
     {
@@ -239,23 +264,26 @@ class TrasnferenciaTEC extends Component
 
     public function editar(int $id): void
     {
+        $asignacion = Asignacion::with(['tecnologia', 'personal', 'archivos', 'areaOrigen', 'areaDestino'])->findOrFail($id);
+
+        $esUltima = Asignacion::where('tecnologia_id', $asignacion->tecnologia_id)->max('id') === $id;
+        if (!$esUltima) {
+            session()->flash('mensaje', 'Este registro es histórico. Solo se permite editar la asignación actual.');
+            return;
+        }
+
         $this->resetFormulario();
         $this->isEditing = true;
         $this->asignacionId = $id;
 
-        $asignacion = Asignacion::with(['tecnologia', 'personal', 'archivos'])->findOrFail($id);
-
-        $this->tecnologia_id = $asignacion->tecnologia_id;
+        $this->tecnologia_id          = $asignacion->tecnologia_id;
         $this->tecnologiaSeleccionada = $asignacion->tecnologia;
-
-        $this->personal_id = $asignacion->personal_id;
-        $this->personalSeleccionado = $asignacion->personal;
-
-        $this->area_origen = $asignacion->area_origen;
-        $this->area_destino = $asignacion->area_destino;
-        $this->fecha_traspaso = $asignacion->fecha_traspaso;
-
-        $this->archivosExistentes = $asignacion->archivos;
+        $this->personal_id            = $asignacion->personal_id;
+        $this->personalSeleccionado   = $asignacion->personal;
+        $this->area_origen_id         = $asignacion->area_origen_id;
+        $this->area_destino_id        = $asignacion->area_destino_id;
+        $this->fecha_traspaso         = $asignacion->fecha_traspaso;
+        $this->archivosExistentes     = $asignacion->archivos;
 
         $this->mostrarModal = true;
     }
@@ -270,37 +298,30 @@ class TrasnferenciaTEC extends Component
                 $antiguoTecnologiaId = $asignacion->tecnologia_id;
 
                 $asignacion->update([
-                    'tecnologia_id'  => $this->tecnologia_id,
-                    'personal_id'    => $this->personal_id,
-                    'area_origen'    => $this->area_origen,
-                    'area_destino'   => $this->area_destino,
-                    'fecha_traspaso' => $this->fecha_traspaso,
+                    'tecnologia_id'   => $this->tecnologia_id,
+                    'personal_id'     => $this->personal_id,
+                    'area_origen_id'  => $this->area_origen_id,
+                    'area_destino_id' => $this->area_destino_id,
+                    'fecha_traspaso'  => $this->fecha_traspaso,
                 ]);
 
-                // Si se cambió de equipo durante la edición
                 if ($antiguoTecnologiaId !== $this->tecnologia_id) {
-                    // El activo anterior queda libre en almacén
                     Tecnologia::where('id', $antiguoTecnologiaId)->update(['estado' => 'Disponible']);
-                    // El nuevo activo pasa a asignado
                     Tecnologia::where('id', $this->tecnologia_id)->update(['estado' => 'Asignado']);
                 }
             } else {
-                // Crear nueva asignación
                 $asignacion = Asignacion::create([
-                    'tecnologia_id'  => $this->tecnologia_id,
-                    'personal_id'    => $this->personal_id,
-                    'area_origen'    => $this->area_origen,
-                    'area_destino'   => $this->area_destino,
-                    'fecha_traspaso' => $this->fecha_traspaso,
+                    'tecnologia_id'   => $this->tecnologia_id,
+                    'personal_id'     => $this->personal_id,
+                    'area_origen_id'  => $this->area_origen_id,
+                    'area_destino_id' => $this->area_destino_id,
+                    'fecha_traspaso'  => $this->fecha_traspaso,
                 ]);
 
-                // El activo pasa automáticamente a 'Asignado'
                 Tecnologia::where('id', $this->tecnologia_id)->update(['estado' => 'Asignado']);
-
                 $this->asignacionSeleccionadaId = $asignacion->id;
             }
 
-            // Guardar nuevos archivos en disco local
             if (!empty($this->archivos)) {
                 foreach ($this->archivos as $archivo) {
                     $nombreOriginal = $archivo->getClientOriginalName();
@@ -316,11 +337,19 @@ class TrasnferenciaTEC extends Component
         });
 
         $this->cerrarModal();
-        session()->flash('mensaje', $this->isEditing ? '¡Asignación actualizada correctamente!' : '¡Nueva asignación registrada con éxito!');
+        session()->flash('mensaje', $this->isEditing ? '¡Asignación actualizada correctamente!' : '¡Nueva transferencia registrada con éxito!');
     }
 
     public function confirmarEliminar(int $id): void
     {
+        $asignacion = Asignacion::findOrFail($id);
+
+        $esUltima = Asignacion::where('tecnologia_id', $asignacion->tecnologia_id)->max('id') === $id;
+        if (!$esUltima) {
+            session()->flash('mensaje', 'Solo se puede anular la asignación más reciente de un equipo.');
+            return;
+        }
+
         $this->asignacionAEliminarId = $id;
         $this->mostrarModalEliminar = true;
     }
@@ -332,12 +361,8 @@ class TrasnferenciaTEC extends Component
         $asignacion = Asignacion::with('archivos')->find($this->asignacionAEliminarId);
 
         if ($asignacion) {
-            // El activo vuelve a estar 'Disponible' en almacén VIN
-            if ($asignacion->tecnologia_id) {
-                Tecnologia::where('id', $asignacion->tecnologia_id)->update(['estado' => 'Disponible']);
-            }
+            $tecId = $asignacion->tecnologia_id;
 
-            // Eliminar archivos del disco local
             foreach ($asignacion->archivos as $doc) {
                 if (Storage::disk('local')->exists($doc->ruta_archivo)) {
                     Storage::disk('local')->delete($doc->ruta_archivo);
@@ -345,13 +370,20 @@ class TrasnferenciaTEC extends Component
             }
             $asignacion->delete();
 
-            // Reajustar vista detallada inferior
+            $asignacionPrevia = Asignacion::where('tecnologia_id', $tecId)->latest('id')->first();
+
+            if ($asignacionPrevia) {
+                Tecnologia::where('id', $tecId)->update(['estado' => 'Asignado']);
+            } else {
+                Tecnologia::where('id', $tecId)->update(['estado' => 'Disponible']);
+            }
+
             if ($this->asignacionSeleccionadaId === $this->asignacionAEliminarId) {
                 $siguiente = Asignacion::latest('id')->first();
                 $this->asignacionSeleccionadaId = $siguiente?->id;
             }
 
-            session()->flash('mensaje', 'Asignación eliminada. El equipo vuelve a estar Disponible.');
+            session()->flash('mensaje', 'Asignación anulada. Se restauró el estado previo del activo.');
         }
 
         $this->mostrarModalEliminar = false;
@@ -371,7 +403,7 @@ class TrasnferenciaTEC extends Component
             'personal_id',
             'tecnologiaSeleccionada',
             'personalSeleccionado',
-            'area_destino',
+            'area_destino_id',
             'archivos',
             'nuevosArchivos',
             'archivosExistentes',
@@ -381,26 +413,136 @@ class TrasnferenciaTEC extends Component
             'asignacionId'
         ]);
         $this->fecha_traspaso = now()->toDateString();
-        $this->area_origen = 'VIN';
+        
+        $areaAlmacen = Area::where('nombre', 'ALMACEN')->first() ?? Area::first();
+        $this->area_origen_id = $areaAlmacen?->id;
+
         $this->resetErrorBag();
+    }
+/**
+     * Exporta la cadena de custodia y transferencias a CSV compatible con Excel
+     */
+    public function exportar()
+    {
+        // 1. Obtener los IDs de las asignaciones más recientes para clasificar Vigente vs Histórico
+        $ultimasAsignacionesIds = Asignacion::selectRaw('MAX(id) as id')
+            ->groupBy('tecnologia_id')
+            ->pluck('id')
+            ->toArray();
+
+        // 2. Consulta optimizada aplicando exactamente los mismos filtros de la tabla
+        $query = Asignacion::with(['tecnologia', 'personal', 'archivos', 'areaOrigen', 'areaDestino'])
+            ->when($this->filtroEstado === 'activas', function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('estado', 'Asignado');
+                });
+            })
+            ->when($this->filtroEstado === 'baja', function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('estado', 'De baja');
+                });
+            })
+            ->when($this->searchHistorial, function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('codigo_vin', 'like', '%' . $this->searchHistorial . '%')
+                      ->orWhere('nombre', 'like', '%' . $this->searchHistorial . '%');
+                })->orWhereHas('personal', function ($p) {
+                    $p->where('nombre', 'like', '%' . $this->searchHistorial . '%')
+                      ->orWhere('apellido', 'like', '%' . $this->searchHistorial . '%');
+                })->orWhereHas('areaDestino', function ($ad) {
+                    $ad->where('nombre', 'like', '%' . $this->searchHistorial . '%');
+                });
+            })
+            ->orderBy('id', 'asc');
+
+        $asignaciones = $query->get();
+
+        // 3. Nombre del archivo dinámico
+        $filename = now()->format('Y-m-d') . '_transferencias_custodia.csv';
+
+        // 4. Generación por Streaming (Memoria limpia)
+        $callback = function () use ($asignaciones, $ultimasAsignacionesIds) {
+            $file = fopen('php://output', 'w');
+
+            // BOM UTF-8 para Excel en español
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Encabezado Institucional
+            fputcsv($file, ['REPORTE DE TRANSFERENCIAS Y CADENA DE CUSTODIA DE ACTIVOS'], ';');
+            fputcsv($file, ['Universidad Nacional de Trujillo - Vicerrectorado de Investigación (VIN)'], ';');
+            fputcsv($file, ['Generado el: ' . now()->format('d/m/Y H:i:s') . ' | Filtro aplicado: ' . strtoupper($this->filtroEstado)], ';');
+            fputcsv($file, [], ';'); // Separador
+
+            // Encabezados de Columnas de Auditoría
+            fputcsv($file, [
+                'Fecha Traspaso',
+                'Código VIN',
+                'Equipo / Activo',
+                'Marca',
+                'Número de Serie',
+                'Área Origen',
+                'Área Destino',
+                'Custodio Receptor',
+                'Cargo del Custodio',
+                'Condición Custodia',
+                'Sustento Documental'
+            ], ';');
+
+            // Llenado de Filas
+            foreach ($asignaciones as $asig) {
+                $esVigente = in_array($asig->id, $ultimasAsignacionesIds);
+                $condicion = $esVigente ? 'Custodio Vigente' : 'Histórico (Reasignado)';
+
+                $nombreCustodio = $asig->personal 
+                    ? $asig->personal->nombre . ' ' . $asig->personal->apellido 
+                    : 'Área general';
+                
+                $cargoCustodio = $asig->personal 
+                    ? $asig->personal->cargo 
+                    : 'Sin asignar';
+
+                $docsCount = $asig->archivos->count();
+                $sustento = $docsCount > 0 ? "Con Acta ({$docsCount} doc)" : 'Sin Acta adjunta';
+
+                fputcsv($file, [
+                    $asig->fecha_traspaso ? Carbon::parse($asig->fecha_traspaso)->format('d/m/Y') : '—',
+                    $asig->tecnologia?->codigo_vin ?? '—',
+                    $asig->tecnologia?->nombre ?? '—',
+                    $asig->tecnologia?->marca ?? '—',
+                    $asig->tecnologia?->serie ?? 'S/N',
+                    $asig->areaOrigen?->nombre ?? 'ALMACEN',
+                    $asig->areaDestino?->nombre ?? '—',
+                    $nombreCustodio,
+                    $cargoCustodio,
+                    $condicion,
+                    $sustento
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ]);
     }
 
     // =========================================================================
-    // RENDERIZADO REACTIVO
+    // RENDERIZADO REACTIVO (CON FILTRO DE ASIGNACIONES ACTIVAS / BAJAS)
     // =========================================================================
     public function render()
     {
-        // Activo asignado actual (por si se edita y se vuelve a buscar el mismo)
         $activoActualId = ($this->isEditing && $this->asignacionId) 
             ? Asignacion::find($this->asignacionId)?->tecnologia_id 
             : null;
 
-        // 1. Solo activos DISPONIBLES (o el activo que ya tiene la asignación en edición)
+        // 1. Buscador asistido en modal (Solo activos Disponible y Asignado)
         $tecnologiasSugeridas = collect();
         if (strlen(trim($this->searchTecnologia)) >= 2 && !$this->tecnologiaSeleccionada) {
             $tecnologiasSugeridas = Tecnologia::whereDoesntHave('salida')
                 ->where(function ($q) use ($activoActualId) {
-                    $q->where('estado', 'Disponible');
+                    $q->whereIn('estado', ['Disponible', 'Asignado']);
                     if ($activoActualId) {
                         $q->orWhere('id', $activoActualId);
                     }
@@ -415,18 +557,34 @@ class TrasnferenciaTEC extends Component
                 ->get();
         }
 
-        // 2. Personal sugerido
+        // 2. Personal por Área Destino
         $personalSugerido = collect();
-        if (strlen(trim($this->searchPersonal)) >= 2 && !$this->personalSeleccionado) {
-            $personalSugerido = Personal::where('nombre', 'like', '%' . $this->searchPersonal . '%')
-                ->orWhere('apellido', 'like', '%' . $this->searchPersonal . '%')
-                ->orWhere('cargo', 'like', '%' . $this->searchPersonal . '%')
-                ->take(6)
+        if ($this->area_destino_id && !$this->personalSeleccionado) {
+            $personalSugerido = Personal::where('area_id', $this->area_destino_id)
+                ->when(strlen(trim($this->searchPersonal)) > 0, function ($q) {
+                    $q->where(function ($query) {
+                        $query->where('nombre', 'like', '%' . $this->searchPersonal . '%')
+                              ->orWhere('apellido', 'like', '%' . $this->searchPersonal . '%')
+                              ->orWhere('cargo', 'like', '%' . $this->searchPersonal . '%');
+                    });
+                })
                 ->get();
         }
 
-        // 3. Historial (Paginación de 8)
-        $historial = Asignacion::with(['tecnologia', 'personal', 'archivos'])
+        // 3. Consulta de Historial con Filtro Inteligente de Estado
+        $historial = Asignacion::with(['tecnologia', 'personal', 'archivos', 'areaOrigen', 'areaDestino'])
+            // Filtro de Estado del Activo
+            ->when($this->filtroEstado === 'activas', function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('estado', 'Asignado');
+                });
+            })
+            ->when($this->filtroEstado === 'baja', function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('estado', 'De baja');
+                });
+            })
+            // Buscador reactivo
             ->when($this->searchHistorial, function ($q) {
                 $q->whereHas('tecnologia', function ($t) {
                     $t->where('codigo_vin', 'like', '%' . $this->searchHistorial . '%')
@@ -434,23 +592,47 @@ class TrasnferenciaTEC extends Component
                 })->orWhereHas('personal', function ($p) {
                     $p->where('nombre', 'like', '%' . $this->searchHistorial . '%')
                       ->orWhere('apellido', 'like', '%' . $this->searchHistorial . '%');
+                })->orWhereHas('areaDestino', function ($ad) {
+                    $ad->where('nombre', 'like', '%' . $this->searchHistorial . '%');
                 });
             })
             ->oldest('id')
-            ->paginate(8);
+            ->paginate(15);
 
-        // 4. Detalle inferior
+        // 4. Detalle y Cadena de Custodios del Activo
         $detalleAsignacion = null;
+        $cadenaCustodios = collect();
+
         if ($this->asignacionSeleccionadaId) {
-            $detalleAsignacion = Asignacion::with(['tecnologia', 'personal', 'archivos'])->find($this->asignacionSeleccionadaId);
+            $detalleAsignacion = Asignacion::with(['tecnologia', 'personal', 'archivos', 'areaOrigen', 'areaDestino'])
+                ->find($this->asignacionSeleccionadaId);
+
+            if ($detalleAsignacion) {
+                $cadenaCustodios = Asignacion::with(['personal', 'areaDestino', 'areaOrigen'])
+                    ->where('tecnologia_id', $detalleAsignacion->tecnologia_id)
+                    ->orderBy('id', 'desc')
+                    ->get();
+            }
         }
 
+        $areas = Area::orderBy('nombre', 'asc')->get();
+
+        // 5. IDs de asignaciones más recientes para blindar la vista
+        $ultimasAsignacionesIds = Asignacion::selectRaw('MAX(id) as id')
+            ->groupBy('tecnologia_id')
+            ->pluck('id')
+            ->toArray();
+        
+
+
         return view('livewire.inventario.trasnferencia-t-e-c', [
-            'tecnologiasSugeridas' => $tecnologiasSugeridas,
-            'personalSugerido'     => $personalSugerido,
-            'historial'            => $historial,
-            'detalleAsignacion'    => $detalleAsignacion,
-            'areasDestino'         => self::AREAS_DESTINO,
+            'tecnologiasSugeridas'   => $tecnologiasSugeridas,
+            'personalSugerido'       => $personalSugerido,
+            'historial'              => $historial,
+            'detalleAsignacion'      => $detalleAsignacion,
+            'cadenaCustodios'        => $cadenaCustodios,
+            'ultimasAsignacionesIds' => $ultimasAsignacionesIds,
+            'areas'                  => $areas,
         ]);
     }
 }

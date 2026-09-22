@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+
 
 class Personal extends Model
 {
@@ -15,11 +17,17 @@ class Personal extends Model
         'nombre',
         'apellido',
         'cargo',
+        'area_id',
         'foto_perfil',
         'grado_academico',
         'correo',
     ];
 
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
 
     // Relación con las asignaciones que ha recibido este personal
     public function asignaciones(): HasMany

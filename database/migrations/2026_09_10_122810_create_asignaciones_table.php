@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('asignaciones', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
-            $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
-            $table->enum('area_origen',['VIN']);
-            $table->enum('area_destino',['TI','Administracion','Imagen','Mesa de partes','Secretaría','Despacho Vicerrectoral']);
-            $table->date('fecha_traspaso');
-            $table->timestamps();
-        });
+            Schema::create('asignaciones', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
+                $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
+                $table->foreignId('area_origen_id')->nullable()->constrained('areas')->onDelete('set null');
+                $table->foreignId('area_destino_id')->nullable()->constrained('areas')->onDelete('set null');
+                $table->date('fecha_traspaso');
+                $table->timestamps();
+            });
     }
 
     /**

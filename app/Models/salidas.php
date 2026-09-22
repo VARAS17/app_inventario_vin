@@ -16,12 +16,25 @@ class salidas extends Model
     protected $table = 'salidas';
     protected $fillable = [
         'tecnologia_id',
-        'motivo',
-        'area_destino',
-        'responsable',
+        'area_origen_id',
+        'tipo_baja',
+        'destino_final',
+        'responsable_recepcion',
         'fecha_salida'
 
     ];
+
+    protected $casts = [
+        'fecha_salida' => 'date',
+    ];
+
+    /**
+     * Área desde donde salió el bien (Almacén VIN, oficina, etc.)
+     */
+    public function areaOrigen(): BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'area_origen_id');
+    }
 
     public function tecnologia(): BelongsTo
     {

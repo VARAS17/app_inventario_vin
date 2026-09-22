@@ -10,7 +10,20 @@ class tecno extends Seeder
 {
     public function run(): void
     {
-        // 1. Tus 88 datos originales
+        // 1. Mapeo directo: Personal ID -> Area ID
+        $mapPersonalArea = [
+            1 => 4, // Jhon Moya       -> TECNOLOGIAS DE LA INFORMACION
+            2 => 5, // Erika Diaz      -> ADMINISTRACION
+            3 => 5, // Margot Sanchez  -> ADMINISTRACION
+            4 => 4, // Jose Varas      -> TECNOLOGIAS DE LA INFORMACION
+            5 => 6, // Luis Celi       -> MESA DE PARTES
+            6 => 7, // Marleny Paredes -> SECRETARIA
+            7 => 3, // Victor Castro   -> IMAGEN
+            8 => 2, // Guillermo P.    -> DESPACHO VICERRECTORAL
+            9 => 2, // Victor Lau      -> DESPACHO VICERRECTORAL
+        ];
+
+        // 2. Tus 88 datos antiguos
         $datosAntiguos = [
             ['id' => 1,  'nombre' => 'laptop', 'marca' => 'lenovo', 'serie' => 'Origen - DINID', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-05-22 13:12:45', 'updated_at' => '2026-07-15 11:31:01'],
             ['id' => 2,  'nombre' => 'Celular', 'marca' => 'Galaxy A36', 'serie' => 'RFFCY30YGWBD', 'lugar' => 'Oficina de comunicaciones', 'estado' => 'En funcionamiento', 'personal_id' => 7, 'created_at' => '2026-07-15 11:07:09', 'updated_at' => '2026-07-15 11:07:09'],
@@ -102,39 +115,57 @@ class tecno extends Seeder
             ['id' => 88, 'nombre' => 'Mouse', 'marca' => 'Genius', 'serie' => '', 'lugar' => 'Almacen', 'estado' => 'Guardado', 'personal_id' => null, 'created_at' => '2026-07-24 12:40:13', 'updated_at' => '2026-07-24 12:40:13'],
         ];
 
-        // 2. Mapeo y transformación automática a la estructura actual
-        $datosNuevos = collect($datosAntiguos)->map(function ($item) {
-            
-            // Correlativo UNT-VIN-0001 al UNT-VIN-0088
+        // 3. Procesamiento e Inserción
+        foreach ($datosAntiguos as $item) {
+            $tienePersonal = !empty($item['personal_id']);
+
+            // Estado del Activo
+            if ($tienePersonal) {
+                $estado = 'Asignado';
+            } elseif ($item['estado'] === 'Reparacion') {
+                $estado = 'Disponible';
+            } else {
+                $estado = 'Disponible'; // Guardados o sin personal
+            }
+
             $codigoVin = 'UNT-VIN-' . str_pad($item['id'], 4, '0', STR_PAD_LEFT);
-
-            // Mapeo inteligente del enum ['Disponible', 'Asignado', 'En Mantenimiento']
-            $estado = match ($item['estado']) {
-                'Reparacion' => 'Disponible',
-                'Guardado'   => 'Disponible',
-                'En funcionamiento' => !empty($item['personal_id']) ? 'Disponible' : 'Disponible',
-                default      => 'Disponible',
-            };
-
-            // Extracción de YYYY-MM-DD
             $fechaIngreso = Carbon::parse($item['created_at'])->toDateString();
 
-            return [
-                'id'            => $item['id'],
-                'codigo_vin'    => $codigoVin,
-                'nombre'        => $item['nombre'],
-                'marca'         => $item['marca'],
-                'serie'         => !empty($item['serie']) ? $item['serie'] : null,
-                'estado'        => $estado,
-                'fecha_ingreso' => $fechaIngreso,
-                'proveedor'     => 'Inventario Inicial',
-                'foto'          => '', // Vacío por ahora, o 'tecnologias/default.png'
-                'created_at'    => $item['created_at'],
-                'updated_at'    => $item['updated_at'],
-            ];
-        })->toArray();
+            // A. Insertar o Actualizar el Activo en `tecnologias`
+            DB::table('tecnologias')->updateOrInsert(
+                ['id' => $item['id']],
+                [
+                    'codigo_vin'    => $codigoVin,
+                    'nombre'        => $item['nombre'],
+                    'marca'         => $item['marca'],
+                    'serie'         => !empty($item['serie']) ? $item['serie'] : null,
+                    'estado'        => $estado,
+                    'fecha_ingreso' => $fechaIngreso,
+                    'proveedor'     => 'Inventario Inicial',
+                    'foto'          => '',
+                    'created_at'    => $item['created_at'],
+                    'updated_at'    => $item['updated_at'],
+                ]
+            );
 
-        // 3. Inserción directa en la base de datos
-        DB::table('tecnologias')->insert($datosNuevos);
+            // B. Si tiene personal asignado, crear su Asignación Histórica en `asignaciones`
+            if ($tienePersonal && isset($mapPersonalArea[$item['personal_id']])) {
+                $areaDestinoId = $mapPersonalArea[$item['personal_id']];
+
+                DB::table('asignaciones')->updateOrInsert(
+                    [
+                        'tecnologia_id' => $item['id'],
+                        'personal_id'   => $item['personal_id'],
+                    ],
+                    [
+                        'area_origen_id'  => 1, // ALMACEN (ID: 1)
+                        'area_destino_id' => $areaDestinoId,
+                        'fecha_traspaso'  => $fechaIngreso,
+                        'created_at'      => $item['created_at'],
+                        'updated_at'      => $item['updated_at'],
+                    ]
+                );
+            }
+        }
     }
 }

@@ -10,6 +10,8 @@ use App\Livewire\Inventario\TrasnferenciaTEC;
 use App\Livewire\Inventario\SalidaTEC;
 use App\Livewire\Inventario\MantenimientoTEC;
 use App\Livewire\Inventario\PrestamoTEC;
+use App\Livewire\TrazabilidadTEC;
+use App\Livewire\AreasVIN;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -18,6 +20,10 @@ Route::view('/', 'welcome');
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::get('areavin', AreasVIN::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('areavin');
 
 Route::get('debaja', Debaja::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
@@ -36,6 +42,11 @@ Route::get('trasnferencia-tec', TrasnferenciaTEC::class)
 Route::get('salida-tec', SalidaTEC::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('salida-tec');
+
+Route::get('trazabilidad-tec', TrazabilidadTEC::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('trazabilidad-tec');
+
 
 Route::get('prestamo-tec', PrestamoTEC::class)
     ->middleware(['auth', 'verified']) // Añade seguridad

@@ -4,12 +4,15 @@ namespace App\Livewire\Inventario;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Computed;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Models\Tecnologia;
+use App\Models\Area;
+use App\Models\asignaciones as Asignacion;
 use App\Models\prestamos as Prestamo;
 use App\Models\prestamos_archivos as PrestamoArchivo;
 
@@ -36,54 +39,52 @@ class PrestamoTEC extends Component
     // Activo seleccionado en el modal
     public ?Tecnologia $tecnologiaSeleccionada = null;
 
-    // Campos del formulario
+    // Campos del formulario (Salida)
     public ?int $tecnologia_id = null;
-    public string $area_origen = 'TI';
+    public ?int $area_origen_id = null; // Autocompletado y bloqueado
     public string $area_destino = '';
     public ?string $responsable = null;
     public string $fecha_prestamo = '';
     public string $fecha_devolucion_pactada = '';
 
+    // Campos de Recepción (Recuadro Verde)
+    public ?string $fecha_devolucion_real = null;
+    public ?string $observacion_devolucion = null;
+
     // Gestión de Archivos (Acumulativa)
-    public array $nuevosArchivos = []; // Receptor del input file (+)
-    public array $archivos = [];       // Archivos temporales acumulados
-    public $archivosExistentes = [];   // Archivos en BD durante edición
+    public array $nuevosArchivos = [];
+    public array $archivos = [];
+    public $archivosExistentes = [];
 
     // Previsualizador modal de archivos (Local Base64)
     public bool $mostrarModalPreview = false;
     public ?string $previewSrc = null;
     public ?string $previewNombre = null;
-    public ?string $previewTipo = null; // 'imagen' | 'pdf' | 'otro'
-
-    // Opciones autorizadas del Enum
-    public const AREAS_ORIGEN = [
-        'TI',
-        'Administracion',
-        'Imagen',
-        'Mesa de partes',
-        'Secretaría',
-        'Despacho Vicerrectoral'
-    ];
+    public ?string $previewTipo = null;
 
     protected function rules(): array
     {
         return [
             'tecnologia_id'            => 'required|exists:tecnologias,id',
-            'area_origen'              => 'required|in:' . implode(',', self::AREAS_ORIGEN),
+            'area_origen_id'           => 'required|exists:areas,id',
             'area_destino'             => 'required|string|max:255',
             'responsable'              => 'nullable|string|max:255',
             'fecha_prestamo'           => 'required|date',
             'fecha_devolucion_pactada' => 'required|date|after_or_equal:fecha_prestamo',
-            'archivos.*'               => 'nullable|file|max:20480', // Máx 20MB por archivo
+            'fecha_devolucion_real'    => 'nullable|date|after_or_equal:fecha_prestamo',
+            'observacion_devolucion'   => 'nullable|string|max:500',
+            'archivos.*'               => 'nullable|file|max:20480',
         ];
     }
 
     protected $messages = [
         'tecnologia_id.required'                 => 'Debe seleccionar un activo tecnológico.',
+        'area_origen_id.required'                => 'El área de origen es obligatoria.',
         'area_destino.required'                  => 'El área de destino es obligatoria.',
         'fecha_prestamo.required'                => 'La fecha de préstamo es requerida.',
         'fecha_devolucion_pactada.required'      => 'La fecha límite pactada es requerida.',
         'fecha_devolucion_pactada.after_or_equal'=> 'La fecha pactada no puede ser anterior a la de préstamo.',
+        'fecha_devolucion_real.after_or_equal'   => 'La fecha de devolución no puede ser anterior a la de préstamo.',
         'archivos.*.max'                         => 'Cada archivo adjunto no debe exceder los 20MB.',
     ];
 
@@ -92,7 +93,6 @@ class PrestamoTEC extends Component
         $this->fecha_prestamo = Carbon::now()->format('Y-m-d');
         $this->fecha_devolucion_pactada = Carbon::now()->addDays(7)->format('Y-m-d');
 
-        // Seleccionar por defecto el primer préstamo para el panel de inspección
         $primer = Prestamo::latest('id')->first();
         if ($primer) {
             $this->prestamoSeleccionadoId = $primer->id;
@@ -100,16 +100,40 @@ class PrestamoTEC extends Component
     }
 
     // =========================================================================
+    // CÁLCULO DE MORA REACTIVO EN TIEMPO REAL (DENTRO DEL MODAL)
+    // =========================================================================
+    #[Computed]
+    public function diagnosticoRetrasoModal(): ?array
+    {
+        if (!$this->fecha_devolucion_real || !$this->fecha_devolucion_pactada) {
+            return null;
+        }
+
+        $pactada = Carbon::parse($this->fecha_devolucion_pactada)->startOfDay();
+        $real = Carbon::parse($this->fecha_devolucion_real)->startOfDay();
+
+        if ($real->greaterThan($pactada)) {
+            $dias = (int) $pactada->diffInDays($real);
+            return [
+                'es_mora' => true,
+                'dias'    => $dias,
+                'mensaje' => "⚠ Devolución fuera de plazo: +{$dias} día(s) de retraso respecto a la fecha pactada.",
+            ];
+        }
+
+        return [
+            'es_mora' => false,
+            'dias'    => 0,
+            'mensaje' => '✔ Devolución conforme dentro del plazo pactado.',
+        ];
+    }
+
+    // =========================================================================
     // 1. MASTER-DETAIL: SELECCIÓN Y ALTERNANCIA DE FILAS
     // =========================================================================
     public function seleccionarParaDetalle(int $id): void
     {
-        // Clic en la misma fila: deselecciona y expande la tabla al 100%
-        if ($this->prestamoSeleccionadoId === $id) {
-            $this->prestamoSeleccionadoId = null;
-        } else {
-            $this->prestamoSeleccionadoId = $id;
-        }
+        $this->prestamoSeleccionadoId = ($this->prestamoSeleccionadoId === $id) ? null : $id;
     }
 
     public function cerrarDetalle(): void
@@ -118,7 +142,7 @@ class PrestamoTEC extends Component
     }
 
     // =========================================================================
-    // 2. SELECCIÓN ASISTIDA DE ACTIVOS EN MODAL (BUSCADOR VISUAL)
+    // 2. SELECCIÓN CON DETECCIÓN AUTOMÁTICA DE ORIGEN
     // =========================================================================
     public function seleccionarTecnologia(int $id): void
     {
@@ -126,6 +150,17 @@ class PrestamoTEC extends Component
         if ($this->tecnologiaSeleccionada) {
             $this->tecnologia_id = $this->tecnologiaSeleccionada->id;
             $this->searchTecnologia = '';
+
+            // DETECCIÓN AUTOMÁTICA DE ORIGEN
+            if ($this->tecnologiaSeleccionada->estado === 'Disponible') {
+                $areaAlmacen = Area::where('nombre', 'ALMACEN')->first() ?? Area::first();
+                $this->area_origen_id = $areaAlmacen?->id;
+            } elseif ($this->tecnologiaSeleccionada->estado === 'Asignado') {
+                $ultimaAsignacion = Asignacion::where('tecnologia_id', $this->tecnologia_id)->latest('id')->first();
+                if ($ultimaAsignacion && $ultimaAsignacion->area_destino_id) {
+                    $this->area_origen_id = $ultimaAsignacion->area_destino_id;
+                }
+            }
         }
     }
 
@@ -133,21 +168,18 @@ class PrestamoTEC extends Component
     {
         $this->tecnologiaSeleccionada = null;
         $this->tecnologia_id = null;
+        $this->area_origen_id = null;
     }
 
     // =========================================================================
-    // 3. GESTIÓN DINÁMICA DE ARCHIVOS CON BOTÓN (+)
+    // 3. GESTIÓN DE ARCHIVOS CON BOTÓN (+)
     // =========================================================================
     public function updatedNuevosArchivos(): void
     {
-        $this->validate([
-            'nuevosArchivos.*' => 'file|max:20480',
-        ]);
-
+        $this->validate(['nuevosArchivos.*' => 'file|max:20480']);
         foreach ($this->nuevosArchivos as $nuevo) {
             $this->archivos[] = $nuevo;
         }
-
         $this->nuevosArchivos = [];
     }
 
@@ -170,7 +202,7 @@ class PrestamoTEC extends Component
     }
 
     // =========================================================================
-    // 4. PREVISUALIZADOR MODAL DE ARCHIVOS (LOCAL BASE64)
+    // 4. PREVISUALIZADOR MODAL DE ARCHIVOS (BASE64)
     // =========================================================================
     public function previsualizarArchivoNuevo(int $index): void
     {
@@ -230,15 +262,13 @@ class PrestamoTEC extends Component
         if (!$rutaFoto || !Storage::disk('local')->exists($rutaFoto)) {
             return null;
         }
-
         $mime = Storage::disk('local')->mimeType($rutaFoto);
         $contenido = Storage::disk('local')->get($rutaFoto);
-
         return 'data:' . $mime . ';base64,' . base64_encode($contenido);
     }
 
     // =========================================================================
-    // 5. OPERACIONES CRUD (CREAR, EDITAR, ELIMINAR, DEVOLVER)
+    // 5. OPERACIONES CRUD (CREAR, EDITAR, GUARDAR CON RECUADRO VERDE)
     // =========================================================================
     public function abrirModal(): void
     {
@@ -253,17 +283,21 @@ class PrestamoTEC extends Component
         $this->isEditing = true;
         $this->prestamoId = $id;
 
-        $prestamo = Prestamo::with(['tecnologia', 'archivos'])->findOrFail($id);
+        $prestamo = Prestamo::with(['tecnologia', 'archivos', 'areaOrigen'])->findOrFail($id);
 
-        $this->tecnologia_id = $prestamo->tecnologia_id;
-        $this->tecnologiaSeleccionada = $prestamo->tecnologia;
-        $this->area_origen = $prestamo->area_origen;
-        $this->area_destino = $prestamo->area_destino;
-        $this->responsable = $prestamo->responsable;
-        $this->fecha_prestamo = $prestamo->fecha_prestamo;
+        $this->tecnologia_id            = $prestamo->tecnologia_id;
+        $this->tecnologiaSeleccionada   = $prestamo->tecnologia;
+        $this->area_origen_id           = $prestamo->area_origen_id;
+        $this->area_destino             = $prestamo->area_destino;
+        $this->responsable              = $prestamo->responsable;
+        $this->fecha_prestamo           = $prestamo->fecha_prestamo;
         $this->fecha_devolucion_pactada = $prestamo->fecha_devolucion_pactada;
 
-        $this->archivosExistentes = $prestamo->archivos;
+        // Cargar campos de retorno
+        $this->fecha_devolucion_real    = $prestamo->fecha_devolucion_real ? Carbon::parse($prestamo->fecha_devolucion_real)->format('Y-m-d') : null;
+        $this->observacion_devolucion   = $prestamo->observacion_devolucion;
+
+        $this->archivosExistentes       = $prestamo->archivos;
         $this->mostrarModal = true;
     }
 
@@ -278,22 +312,29 @@ class PrestamoTEC extends Component
 
                 $prestamo->update([
                     'tecnologia_id'            => $this->tecnologia_id,
-                    'area_origen'              => $this->area_origen,
+                    'area_origen_id'           => $this->area_origen_id,
                     'area_destino'             => $this->area_destino,
                     'responsable'              => !empty($this->responsable) ? trim($this->responsable) : null,
                     'fecha_prestamo'           => $this->fecha_prestamo,
                     'fecha_devolucion_pactada' => $this->fecha_devolucion_pactada,
+                    'fecha_devolucion_real'    => $this->fecha_devolucion_real ?: null,
+                    'observacion_devolucion'   => $this->observacion_devolucion ?: null,
                 ]);
+
+                // Transición de estados según si se registró la fecha real de devolución
+                if ($this->fecha_devolucion_real) {
+                    // Si ya retornó, recupera su estado previo (Disponible o Asignado)
+                    Tecnologia::where('id', $this->tecnologia_id)->update([
+                        'estado' => $prestamo->estado_previo ?: 'Disponible'
+                    ]);
+                } else {
+                    // Si sigue en préstamo
+                    Tecnologia::where('id', $this->tecnologia_id)->update(['estado' => 'Prestado']);
+                }
 
                 // Si se cambió de activo durante la edición
                 if ($antiguaTecnologiaId !== $this->tecnologia_id) {
-                    // El activo anterior recupera su estado previo
-                    Tecnologia::where('id', $antiguaTecnologiaId)->update(['estado' => $prestamo->estado_previo]);
-                    
-                    // El nuevo activo guarda su estado original y pasa a 'Prestado'
-                    $nuevaTecnologia = Tecnologia::findOrFail($this->tecnologia_id);
-                    $prestamo->update(['estado_previo' => $nuevaTecnologia->estado]);
-                    $nuevaTecnologia->update(['estado' => 'Prestado']);
+                    Tecnologia::where('id', $antiguaTecnologiaId)->update(['estado' => $prestamo->estado_previo ?: 'Disponible']);
                 }
             } else {
                 // Nuevo Préstamo
@@ -302,22 +343,24 @@ class PrestamoTEC extends Component
 
                 $prestamo = Prestamo::create([
                     'tecnologia_id'            => $this->tecnologia_id,
-                    'area_origen'              => $this->area_origen,
+                    'area_origen_id'           => $this->area_origen_id,
                     'area_destino'             => $this->area_destino,
                     'responsable'              => !empty($this->responsable) ? trim($this->responsable) : null,
                     'fecha_prestamo'           => $this->fecha_prestamo,
                     'fecha_devolucion_pactada' => $this->fecha_devolucion_pactada,
-                    'fecha_devolucion_real'    => null,
+                    'fecha_devolucion_real'    => $this->fecha_devolucion_real ?: null,
                     'estado_previo'            => $estadoPrevio,
+                    'observacion_devolucion'   => $this->observacion_devolucion ?: null,
                 ]);
 
-                // Activo pasa a 'Prestado'
-                $tecnologia->update(['estado' => 'Prestado']);
+                // Si se creó con fecha de retorno ya incluida, vuelve al estado previo; si no, pasa a 'Prestado'
+                $estadoFinal = $this->fecha_devolucion_real ? $estadoPrevio : 'Prestado';
+                $tecnologia->update(['estado' => $estadoFinal]);
 
                 $this->prestamoSeleccionadoId = $prestamo->id;
             }
 
-            // Guardar archivos acumulados en almacenamiento LOCAL
+            // Archivos adjuntos
             if (!empty($this->archivos)) {
                 foreach ($this->archivos as $archivo) {
                     $nombreOriginal = $archivo->getClientOriginalName();
@@ -333,24 +376,7 @@ class PrestamoTEC extends Component
         });
 
         $this->cerrarModal();
-        session()->flash('mensaje', $this->isEditing ? '¡Préstamo actualizado correctamente!' : '¡Préstamo registrado con éxito!');
-    }
-
-    public function devolverActivo(int $prestamoId): void
-    {
-        DB::transaction(function () use ($prestamoId) {
-            $prestamo = Prestamo::with('tecnologia')->findOrFail($prestamoId);
-
-            $prestamo->update([
-                'fecha_devolucion_real' => Carbon::now()->format('Y-m-d')
-            ]);
-
-            $prestamo->tecnologia->update([
-                'estado' => $prestamo->estado_previo
-            ]);
-        });
-
-        session()->flash('mensaje', 'Activo devuelto y restaurado a su estado original.');
+        session()->flash('mensaje', 'Registro de préstamo guardado y estado del activo actualizado correctamente.');
     }
 
     public function confirmarEliminar(int $id): void
@@ -367,12 +393,11 @@ class PrestamoTEC extends Component
             $prestamo = Prestamo::with('archivos')->find($this->prestamoAEliminarId);
 
             if ($prestamo) {
-                // Si se elimina un préstamo activo, restaurar el activo a su estado previo
+                // Si se elimina un préstamo activo, restaurar al estado previo
                 if (is_null($prestamo->fecha_devolucion_real) && $prestamo->tecnologia_id) {
-                    Tecnologia::where('id', $prestamo->tecnologia_id)->update(['estado' => $prestamo->estado_previo]);
+                    Tecnologia::where('id', $prestamo->tecnologia_id)->update(['estado' => $prestamo->estado_previo ?: 'Disponible']);
                 }
 
-                // Eliminar archivos del disco local
                 foreach ($prestamo->archivos as $doc) {
                     if (Storage::disk('local')->exists($doc->ruta_archivo)) {
                         Storage::disk('local')->delete($doc->ruta_archivo);
@@ -381,7 +406,6 @@ class PrestamoTEC extends Component
 
                 $prestamo->delete();
 
-                // Reajustar panel de detalle si la fila seleccionada fue eliminada
                 if ($this->prestamoSeleccionadoId === $this->prestamoAEliminarId) {
                     $siguiente = Prestamo::latest('id')->first();
                     $this->prestamoSeleccionadoId = $siguiente?->id;
@@ -391,7 +415,7 @@ class PrestamoTEC extends Component
 
         $this->mostrarModalEliminar = false;
         $this->prestamoAEliminarId = null;
-        session()->flash('mensaje', 'Registro de préstamo y sus archivos eliminados del sistema.');
+        session()->flash('mensaje', 'Registro de préstamo eliminado y activo restaurado.');
     }
 
     public function cerrarModal(): void
@@ -405,8 +429,11 @@ class PrestamoTEC extends Component
         $this->reset([
             'tecnologia_id',
             'tecnologiaSeleccionada',
+            'area_origen_id',
             'area_destino',
             'responsable',
+            'fecha_devolucion_real',
+            'observacion_devolucion',
             'archivos',
             'nuevosArchivos',
             'archivosExistentes',
@@ -416,21 +443,126 @@ class PrestamoTEC extends Component
         ]);
         $this->fecha_prestamo = Carbon::now()->format('Y-m-d');
         $this->fecha_devolucion_pactada = Carbon::now()->addDays(7)->format('Y-m-d');
-        $this->area_origen = 'TI';
         $this->resetErrorBag();
+    }
+    /**
+     * Exporta el historial de préstamos, control de plazos y moras a CSV/Excel
+     */
+    public function exportar()
+    {
+        // 1. Consulta optimizada respetando los mismos filtros de búsqueda
+        $query = Prestamo::with(['tecnologia', 'archivos', 'areaOrigen'])
+            ->when($this->searchPrestamo, function ($q) {
+                $q->whereHas('tecnologia', function ($t) {
+                    $t->where('nombre', 'like', '%' . $this->searchPrestamo . '%')
+                      ->orWhere('codigo_vin', 'like', '%' . $this->searchPrestamo . '%');
+                })
+                ->orWhere('area_destino', 'like', '%' . $this->searchPrestamo . '%')
+                ->orWhere('responsable', 'like', '%' . $this->searchPrestamo . '%')
+                ->orWhereHas('areaOrigen', function ($ao) {
+                    $ao->where('nombre', 'like', '%' . $this->searchPrestamo . '%');
+                });
+            })
+            ->latest('id');
+
+        $prestamos = $query->get();
+
+        // 2. Nombre de archivo con fecha
+        $filename = now()->format('Y-m-d') . '_control_prestamos.csv';
+
+        // 3. Streaming nativo de memoria limpia con BOM UTF-8
+        $callback = function () use ($prestamos) {
+            $file = fopen('php://output', 'w');
+
+            // BOM UTF-8 para Excel en español
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Encabezados Institucionales
+            fputcsv($file, ['REPORTE DE CONTROL DE PRESTAMOS TECNOLOGICOS Y MORAS'], ';');
+            fputcsv($file, ['Universidad Nacional de Trujillo - Vicerrectorado de Investigación (VIN)'], ';');
+            fputcsv($file, ['Generado el: ' . now()->format('d/m/Y H:i:s') . ' | Sistema Patrimonial'], ';');
+            fputcsv($file, [], ';'); // Separador
+
+            // Columnas de Auditoría de Préstamos
+            fputcsv($file, [
+                'Código VIN',
+                'Equipo / Activo',
+                'Número de Serie',
+                'Área Origen',
+                'Destino del Préstamo',
+                'Responsable Receptor',
+                'Fecha Préstamo',
+                'Fecha Límite Pactada',
+                'Fecha Real Devolución',
+                'Situación / Diagnóstico de Mora',
+                'Observaciones de Retorno',
+                'Sustento Documental'
+            ], ';');
+
+            $hoy = Carbon::today();
+
+            // Llenado de Filas con Cálculo Matemático de Plazos
+            foreach ($prestamos as $p) {
+                $pactada = Carbon::parse($p->fecha_devolucion_pactada)->startOfDay();
+
+                // Lógica de Diagnóstico de Retraso en tiempo real
+                if (is_null($p->fecha_devolucion_real)) {
+                    if ($hoy->greaterThan($pactada)) {
+                        $dias = (int) $pactada->diffInDays($hoy);
+                        $situacion = "VENCIDO - En Mora (+{$dias} días)";
+                    } else {
+                        $situacion = "En Curso (Dentro del Plazo)";
+                    }
+                    $fechaRetornoTexto = 'Pendiente de Retorno';
+                } else {
+                    $real = Carbon::parse($p->fecha_devolucion_real)->startOfDay();
+                    if ($real->greaterThan($pactada)) {
+                        $dias = (int) $pactada->diffInDays($real);
+                        $situacion = "Devuelto con Retraso (+{$dias} días)";
+                    } else {
+                        $situacion = "Devuelto Conforme (A Tiempo)";
+                    }
+                    $fechaRetornoTexto = $real->format('d/m/Y');
+                }
+
+                $docsCount = $p->archivos->count();
+                $sustento = $docsCount > 0 ? "Con Acta ({$docsCount} doc)" : 'Sin Acta adjunta';
+
+                fputcsv($file, [
+                    $p->tecnologia?->codigo_vin ?? '—',
+                    $p->tecnologia?->nombre ?? '—',
+                    $p->tecnologia?->serie ?? 'S/N',
+                    $p->areaOrigen?->nombre ?? 'ALMACEN',
+                    $p->area_destino,
+                    $p->responsable ?? 'No indicado',
+                    $p->fecha_prestamo ? Carbon::parse($p->fecha_prestamo)->format('d/m/Y') : '—',
+                    $pactada->format('d/m/Y'),
+                    $fechaRetornoTexto,
+                    $situacion,
+                    $p->observacion_devolucion ?? 'Sin observaciones registradas',
+                    $sustento
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ]);
     }
 
     // =========================================================================
-    // 6. RENDERIZADO REACTIVO (PAGINACIÓN DE 8 Y CÁLCULO DE MORAS)
+    // 6. RENDERIZADO REACTIVO (CÁLCULO DE MORAS)
     // =========================================================================
     public function render()
     {
-        // Activo actual del préstamo en edición (para permitir volver a seleccionarlo)
         $activoActualId = ($this->isEditing && $this->prestamoId) 
             ? Prestamo::find($this->prestamoId)?->tecnologia_id 
             : null;
 
-        // 1. Buscador asistido en modal: Solo activos 'Disponible' o 'Asignado' (máx 6 resultados)
+        // 1. Activos disponibles o asignados
         $tecnologiasSugeridas = collect();
         if (strlen(trim($this->searchTecnologia)) >= 2 && !$this->tecnologiaSeleccionada) {
             $tecnologiasSugeridas = Tecnologia::whereDoesntHave('salida')
@@ -450,20 +582,23 @@ class PrestamoTEC extends Component
                 ->get();
         }
 
-        // 2. Historial de Préstamos (Paginación estricta de 8)
-        $prestamos = Prestamo::with(['tecnologia', 'archivos'])
+        // 2. Historial de Préstamos
+        $prestamos = Prestamo::with(['tecnologia', 'archivos', 'areaOrigen'])
             ->when($this->searchPrestamo, function ($q) {
                 $q->whereHas('tecnologia', function ($t) {
                     $t->where('nombre', 'like', '%' . $this->searchPrestamo . '%')
                       ->orWhere('codigo_vin', 'like', '%' . $this->searchPrestamo . '%');
                 })
                 ->orWhere('area_destino', 'like', '%' . $this->searchPrestamo . '%')
-                ->orWhere('responsable', 'like', '%' . $this->searchPrestamo . '%');
+                ->orWhere('responsable', 'like', '%' . $this->searchPrestamo . '%')
+                ->orWhereHas('areaOrigen', function ($ao) {
+                    $ao->where('nombre', 'like', '%' . $this->searchPrestamo . '%');
+                });
             })
             ->latest('id')
             ->paginate(8);
 
-        // 3. Lógica matemática de días de retraso
+        // 3. Lógica matemática de retrasos
         $hoy = Carbon::today();
         foreach ($prestamos as $item) {
             $pactada = Carbon::parse($item->fecha_devolucion_pactada)->startOfDay();
@@ -480,10 +615,10 @@ class PrestamoTEC extends Component
             }
         }
 
-        // 4. Panel de Inspección Derecho (Fila seleccionada)
+        // 4. Panel lateral de inspección
         $detallePrestamo = null;
         if ($this->prestamoSeleccionadoId) {
-            $detallePrestamo = Prestamo::with(['tecnologia', 'archivos'])->find($this->prestamoSeleccionadoId);
+            $detallePrestamo = Prestamo::with(['tecnologia', 'archivos', 'areaOrigen'])->find($this->prestamoSeleccionadoId);
             if ($detallePrestamo) {
                 $pactadaDetalle = Carbon::parse($detallePrestamo->fecha_devolucion_pactada)->startOfDay();
                 if (is_null($detallePrestamo->fecha_devolucion_real)) {
@@ -499,11 +634,13 @@ class PrestamoTEC extends Component
             }
         }
 
+        $areas = Area::orderBy('nombre', 'asc')->get();
+
         return view('livewire.inventario.prestamo-t-e-c', [
             'prestamos'            => $prestamos,
             'detallePrestamo'      => $detallePrestamo,
             'tecnologiasSugeridas' => $tecnologiasSugeridas,
-            'areasOrigen'          => self::AREAS_ORIGEN,
+            'areas'                => $areas,
         ]);
     }
 }

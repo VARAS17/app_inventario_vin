@@ -15,14 +15,21 @@ class prestamos extends Model
 
     protected $fillable = [
         'tecnologia_id',
-        'area_origen',
+        'area_origen_id',
         'area_destino',
         'responsable',
         'fecha_prestamo',
         'fecha_devolucion_pactada',
         'fecha_devolucion_real',
         'estado_previo',
+        'observacion_devolucion',
     ];
+
+    // Área interna desde donde sale el préstamo
+    public function areaOrigen(): BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'area_origen_id');
+    }
 
     public function tecnologia(): BelongsTo
     {

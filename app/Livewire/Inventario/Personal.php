@@ -7,6 +7,7 @@ use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use App\Models\Personal as PersonalModel;
+use App\Models\Area; // Importado para cargar el listado de áreas en la vista
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Exception;
@@ -20,6 +21,7 @@ class Personal extends Component
 
     // Propiedades del formulario
     public $personal_id;
+    public $area_id; // <-- NUEVO CAMPO
     public $nombre;
     public $apellido;
     public $cargo;
@@ -40,6 +42,7 @@ class Personal extends Component
     protected function rules()
     {
         return [
+            'area_id'         => 'required|exists:areas,id', // <-- VALIDACIÓN DEL ÁREA
             'nombre'          => 'required|min:2|max:100',
             'apellido'        => 'required|min:2|max:100',
             'cargo'           => 'required|string|max:100',
@@ -60,6 +63,8 @@ class Personal extends Component
     protected function messages()
     {
         return [
+            'area_id.required'         => 'Debe seleccionar un área de trabajo.',
+            'area_id.exists'           => 'El área seleccionada no es válida.',
             'nombre.required'          => 'El nombre es obligatorio.',
             'nombre.min'               => 'El nombre debe tener al menos 2 caracteres.',
             'apellido.required'        => 'El apellido es obligatorio.',
@@ -91,17 +96,25 @@ class Personal extends Component
 
     public function render()
     {
-        $personales = PersonalModel::where(function($query) {
+        $personales = PersonalModel::with('area') // Carga la relación para evitar lentitud en la tabla
+            ->where(function($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
                       ->orWhere('apellido', 'like', '%' . $this->search . '%')
                       ->orWhere('cargo', 'like', '%' . $this->search . '%')
-                      ->orWhere('correo', 'like', '%' . $this->search . '%');
+                      ->orWhere('correo', 'like', '%' . $this->search . '%')
+                      ->orWhereHas('area', function($q) {
+                          $q->where('nombre', 'like', '%' . $this->search . '%');
+                      });
             })
             ->latest()
             ->paginate(10);
 
+        // Se envía el listado de áreas para llenar el <select> en la vista
+        $areas = Area::orderBy('nombre', 'asc')->get();
+
         return view('livewire.inventario.personal', [
-            'personales' => $personales
+            'personales' => $personales,
+            'areas'      => $areas
         ]);
     }
 
@@ -117,6 +130,7 @@ class Personal extends Component
         $persona = PersonalModel::findOrFail($id);
 
         $this->personal_id     = $persona->id;
+        $this->area_id         = $persona->area_id; // <-- CARGAR ÁREA AL EDITAR
         $this->nombre          = $persona->nombre;
         $this->apellido        = $persona->apellido;
         $this->cargo           = $persona->cargo;
@@ -133,8 +147,9 @@ class Personal extends Component
         $this->validate();
 
         try {
-            // Datos base a persistir (sin asignar foto_perfil inicialmente)
+            // Datos base a persistir
             $datos = [
+                'area_id'         => $this->area_id, // <-- GUARDAR O ACTUALIZAR ÁREA
                 'nombre'          => $this->nombre,
                 'apellido'        => $this->apellido,
                 'cargo'           => $this->cargo,
@@ -201,6 +216,7 @@ class Personal extends Component
     private function resetInputFields()
     {
         $this->personal_id     = null;
+        $this->area_id         = null; // <-- REINICIAR VALOR
         $this->nombre          = '';
         $this->apellido        = '';
         $this->cargo           = '';

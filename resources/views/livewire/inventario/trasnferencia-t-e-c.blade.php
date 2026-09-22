@@ -1,20 +1,43 @@
 <div class="p-4 space-y-4 max-w-full mx-auto bg-zinc-100 min-h-screen font-sans text-zinc-800">
 
     <!-- ========================================================================= -->
-    <!-- CABECERA PRINCIPAL: TÍTULO, BUSCADOR Y ACCIÓN                             -->
+    <!-- CABECERA PRINCIPAL: TÍTULO, FILTRO DE ESTADO, BUSCADOR Y ACCIÓN           -->
     <!-- ========================================================================= -->
-    <div class="bg-white border border-zinc-300 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 shadow-sm rounded-none">
+    <div class="bg-white border border-zinc-300 p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shadow-sm rounded-none">
         <div>
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-6 bg-blue-700 inline-block"></span>
                 <h1 class="text-xl font-bold uppercase tracking-tight text-zinc-900">Transferencias y Asignaciones</h1>
             </div>
-            <p class="text-xs text-zinc-500 mt-0.5 ml-4.5">Control de traspasos de bienes tecnológicos desde VIN hacia dependencias institucionales.</p>
+            <p class="text-xs text-zinc-500 mt-0.5 ml-4.5">Control de traspasos y rotación de bienes tecnológicos entre dependencias institucionales.</p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            
+            <!-- FILTRO PLANO DE ASIGNACIONES (ACTIVAS / DE BAJA / TODAS) -->
+            <div class="inline-flex border border-zinc-300 p-0.5 bg-zinc-100 text-[10px] font-mono font-bold uppercase">
+                <button type="button" 
+                        wire:click="$set('filtroEstado', 'activas')" 
+                        class="px-2.5 py-1 transition-colors cursor-pointer {{ $filtroEstado === 'activas' ? 'bg-blue-700 text-white' : 'text-zinc-600 hover:bg-zinc-200' }}"
+                        title="Mostrar solo asignaciones de activos que están actualmente en uso">
+                    Activas
+                </button>
+                <button type="button" 
+                        wire:click="$set('filtroEstado', 'baja')" 
+                        class="px-2.5 py-1 transition-colors cursor-pointer {{ $filtroEstado === 'baja' ? 'bg-rose-700 text-white' : 'text-zinc-600 hover:bg-zinc-200' }}"
+                        title="Mostrar asignaciones históricas de activos que terminaron dados de baja">
+                    De Baja
+                </button>
+                <button type="button" 
+                        wire:click="$set('filtroEstado', 'todas')" 
+                        class="px-2.5 py-1 transition-colors cursor-pointer {{ $filtroEstado === 'todas' ? 'bg-zinc-800 text-white' : 'text-zinc-600 hover:bg-zinc-200' }}"
+                        title="Ver todo el universo de traspasos históricos">
+                    Todas
+                </button>
+            </div>
+
             <!-- Buscador en historial -->
-            <div class="relative w-64">
+            <div class="relative w-full sm:w-60">
                 <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-zinc-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -23,19 +46,28 @@
                 <input 
                     type="text" 
                     wire:model.live.debounce.300ms="searchHistorial" 
-                    placeholder="Buscar VIN, equipo o custodio..." 
+                    placeholder="Buscar VIN, equipo, custodio..." 
                     class="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-50 border border-zinc-300 rounded-none focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
                 />
             </div>
 
+            <!-- Botón Nueva Asignación -->
             <button 
                 wire:click="abrirModal" 
-                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs uppercase tracking-wider rounded-none shadow-sm transition-colors"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs uppercase tracking-wider rounded-none shadow-sm transition-colors cursor-pointer shrink-0"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 Nueva Asignación
+            </button>
+            <button type="button" 
+                    wire:click="exportar" 
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs uppercase tracking-wider rounded-none transition-colors shrink-0 cursor-pointer shadow-none">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Exportar Historial</span>
             </button>
         </div>
     </div>
@@ -57,7 +89,7 @@
     <!-- ========================================================================= -->
     <div class="flex flex-col lg:flex-row gap-4 items-start">
         
-        <!-- SECCIÓN IZQUIERDA: TABLA DE DATOS (SE EXPANDE AL 100% SI NO HAY DETALLE) -->
+        <!-- SECCIÓN IZQUIERDA: TABLA DE DATOS -->
         <div class="{{ $detalleAsignacion ? 'w-full lg:w-7/12' : 'w-full' }} transition-all duration-200">
             <div class="bg-white border border-zinc-300 shadow-sm overflow-hidden rounded-none">
                 
@@ -66,7 +98,7 @@
                         <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                         </svg>
-                        Listado de Asignaciones
+                        Listado de Asignaciones ({{ $filtroEstado === 'activas' ? 'Vigentes' : ($filtroEstado === 'baja' ? 'De Baja' : 'Completas') }})
                     </span>
                     @if($detalleAsignacion)
                         <span class="text-[11px] text-blue-300 font-normal">Fila seleccionada activa</span>
@@ -85,18 +117,19 @@
                                 <th class="px-3 py-2.5 border-r border-zinc-300">Destino</th>
                                 <th class="px-3 py-2.5 border-r border-zinc-300">Custodio</th>
                                 <th class="px-3 py-2.5 border-r border-zinc-300 text-center w-16">Docs</th>
-                                <th class="px-3 py-2.5 text-center w-24">Acciones</th>
+                                <th class="px-3 py-2.5 text-center w-28">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-200">
                             @forelse ($historial as $index => $item)
                                 @php 
                                     $isSelected = $asignacionSeleccionadaId === $item->id;
+                                    $esUltima = in_array($item->id, $ultimasAsignacionesIds ?? []);
                                 @endphp
                                 <tr 
                                     wire:click="{{ $isSelected ? "\$set('asignacionSeleccionadaId', null)" : "seleccionarParaDetalle($item->id)" }}" 
                                     class="cursor-pointer transition-colors {{ $isSelected ? 'bg-blue-100/90 border-l-4 border-l-blue-700 font-medium' : 'hover:bg-zinc-50' }}"
-                                    title="{{ $isSelected ? 'Clic para deseleccionar y cerrar detalle' : 'Clic para inspeccionar ficha técnica' }}"
+                                    title="{{ $isSelected ? 'Clic para deseleccionar' : 'Clic para inspeccionar ficha y cadena de custodia' }}"
                                 >
                                     <td class="px-3 py-2 text-center font-mono text-zinc-500 border-r border-zinc-200">
                                         {{ ($historial->currentPage() - 1) * $historial->perPage() + $loop->iteration }}
@@ -109,16 +142,18 @@
                                             <span class="px-1.5 py-0.2 bg-zinc-200 text-zinc-800 font-mono text-[10px] font-bold border border-zinc-300">
                                                 {{ $item->tecnologia?->codigo_vin }}
                                             </span>
-                                            <span class="text-zinc-900 truncate max-w-[180px]">{{ $item->tecnologia?->nombre }}</span>
+                                            <span class="text-zinc-900 truncate max-w-[170px]">{{ $item->tecnologia?->nombre }}</span>
                                         </div>
                                     </td>
                                     <td class="px-3 py-2 border-r border-zinc-200 whitespace-nowrap">
-                                        <span class="px-1.5 py-0.5 bg-zinc-100 text-zinc-800 border border-zinc-300 font-semibold text-[11px]">{{ $item->area_destino }}</span>
+                                        <span class="px-1.5 py-0.5 bg-zinc-100 text-zinc-800 border border-zinc-300 font-semibold text-[11px]">
+                                            {{ $item->areaDestino?->nombre ?? '—' }}
+                                        </span>
                                     </td>
                                     <td class="px-3 py-2 border-r border-zinc-200">
                                         @if($item->personal)
-                                            <div class="text-zinc-900 font-semibold truncate max-w-[160px]">{{ $item->personal->nombre }} {{ $item->personal->apellido }}</div>
-                                            <div class="text-[10px] text-zinc-500 truncate max-w-[160px]">{{ $item->personal->cargo }}</div>
+                                            <div class="text-zinc-900 font-semibold truncate max-w-[150px]">{{ $item->personal->nombre }} {{ $item->personal->apellido }}</div>
+                                            <div class="text-[10px] text-zinc-500 truncate max-w-[150px]">{{ $item->personal->cargo }}</div>
                                         @else
                                             <span class="text-zinc-400 italic">Área general</span>
                                         @endif
@@ -132,33 +167,42 @@
                                             <span class="text-zinc-400">—</span>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-1.5 text-center" onclick="event.stopPropagation();">
-                                        <div class="inline-flex items-center gap-1">
-                                            <button 
-                                                wire:click="editar({{ $item->id }})" 
-                                                class="p-1 bg-zinc-100 hover:bg-amber-100 text-zinc-700 hover:text-amber-800 border border-zinc-300 transition-colors"
-                                                title="Editar asignación"
-                                            >
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    <td class="px-3 py-1.5 text-center whitespace-nowrap" onclick="event.stopPropagation();">
+                                        @if($esUltima)
+                                            <div class="inline-flex items-center gap-1">
+                                                <button 
+                                                    wire:click="editar({{ $item->id }})" 
+                                                    class="p-1 bg-zinc-100 hover:bg-amber-100 text-zinc-700 hover:text-amber-800 border border-zinc-300 transition-colors cursor-pointer"
+                                                    title="Editar asignación actual"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                </button>
+                                                <button 
+                                                    wire:click="confirmarEliminar({{ $item->id }})" 
+                                                    class="p-1 bg-zinc-100 hover:bg-rose-100 text-zinc-700 hover:text-rose-800 border border-zinc-300 transition-colors cursor-pointer"
+                                                    title="Anular asignación (Retrocederá a custodia anterior)"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zinc-100 border border-zinc-300 text-zinc-400 font-mono text-[10px]" title="Registro histórico inmutable por auditoría">
+                                                <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                                 </svg>
-                                            </button>
-                                            <button 
-                                                wire:click="confirmarEliminar({{ $item->id }})" 
-                                                class="p-1 bg-zinc-100 hover:bg-rose-100 text-zinc-700 hover:text-rose-800 border border-zinc-300 transition-colors"
-                                                title="Eliminar registro"
-                                            >
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                </svg>
-                                            </button>
-                                        </div>
+                                                Histórico
+                                            </span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
                                     <td colspan="7" class="px-4 py-8 text-center text-zinc-500 font-medium">
-                                        No se encontraron transferencias registradas.
+                                        No se encontraron transferencias con los criterios seleccionados.
                                     </td>
                                 </tr>
                             @endforelse
@@ -168,7 +212,7 @@
 
                 @if($historial->hasPages())
                     <div class="px-4 py-2 border-t border-zinc-300 bg-zinc-50 flex items-center justify-between">
-                        <span class="text-xs text-zinc-500">8 registros por página</span>
+                        <span class="text-xs text-zinc-500">15 registros por página</span>
                         <div>{{ $historial->links() }}</div>
                     </div>
                 @endif
@@ -176,12 +220,12 @@
         </div>
 
         <!-- ===================================================================== -->
-        <!-- SECCIÓN DERECHA: DETALLE (COLAPSABLE / DESPLEGABLE)                    -->
+        <!-- SECCIÓN DERECHA: FICHA TÉCNICA + CADENA DE CUSTODIA COMPLETA          -->
         <!-- ===================================================================== -->
         @if($detalleAsignacion)
-            <div class="w-full lg:w-5/12 space-y-4 animate-fade-in">
+            <div class="w-full lg:w-5/12 space-y-4">
 
-                <!-- 1. PARTE SUPERIOR DERECHA: FICHA DEL ACTIVO TECNOLÓGICO -->
+                <!-- 1. FICHA DEL ACTIVO TECNOLÓGICO -->
                 <div class="bg-white border border-zinc-300 shadow-sm rounded-none">
                     <div class="bg-zinc-800 text-white px-4 py-2.5 border-b border-zinc-700 flex items-center justify-between">
                         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -195,11 +239,10 @@
                             <span class="font-mono text-[11px] px-2 py-0.5 bg-blue-600 text-white font-bold">
                                 {{ $detalleAsignacion->tecnologia?->codigo_vin }}
                             </span>
-                            <!-- BOTÓN PARA CERRAR / LIMPIAR LA VISTA -->
                             <button 
                                 wire:click="$set('asignacionSeleccionadaId', null)"
-                                class="px-2 py-0.5 bg-zinc-700 hover:bg-rose-700 text-white font-bold text-[10px] uppercase tracking-wider transition-colors"
-                                title="Ocultar panel de detalles y expandir tabla"
+                                class="px-2 py-0.5 bg-zinc-700 hover:bg-rose-700 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                                title="Ocultar panel de detalles"
                             >
                                 ✕ Cerrar Detalle
                             </button>
@@ -209,7 +252,6 @@
                     <div class="p-4">
                         @php $tec = $detalleAsignacion->tecnologia; @endphp
                         <div class="flex flex-col sm:flex-row gap-4">
-                            <!-- Foto Grande del Activo -->
                             <div class="w-full sm:w-36 h-36 bg-zinc-100 border border-zinc-300 flex-shrink-0 flex items-center justify-center overflow-hidden">
                                 @if($tec?->foto)
                                     <img src="{{ route('tecnologia.foto', ['path' => $tec->foto]) }}" alt="Foto del Activo" class="w-full h-full object-cover">
@@ -223,7 +265,6 @@
                                 @endif
                             </div>
 
-                            <!-- Especificaciones Técnicas -->
                             <div class="flex-1 min-w-0">
                                 <table class="w-full text-xs border border-zinc-200">
                                     <tbody class="divide-y divide-zinc-200">
@@ -242,14 +283,14 @@
                                         <tr>
                                             <td class="px-2.5 py-1.5 font-bold text-zinc-600 border-r border-zinc-200">Estado:</td>
                                             <td class="px-2.5 py-1.5">
-                                                <span class="px-1.5 py-0.2 font-bold text-[10px] bg-blue-100 text-blue-900 border border-blue-300 uppercase">
+                                                <span class="px-1.5 py-0.2 font-bold text-[10px] border uppercase
+                                                    {{ $tec?->estado === 'Asignado' ? 'bg-blue-100 text-blue-900 border-blue-300' : '' }}
+                                                    {{ $tec?->estado === 'De baja' ? 'bg-rose-100 text-rose-900 border-rose-300' : '' }}
+                                                    {{ $tec?->estado === 'Disponible' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : '' }}
+                                                ">
                                                     {{ $tec?->estado }}
                                                 </span>
                                             </td>
-                                        </tr>
-                                        <tr class="bg-zinc-50">
-                                            <td class="px-2.5 py-1.5 font-bold text-zinc-600 border-r border-zinc-200">Ingreso:</td>
-                                            <td class="px-2.5 py-1.5 font-mono text-zinc-700">{{ $tec?->fecha_ingreso ? \Carbon\Carbon::parse($tec->fecha_ingreso)->format('d/m/Y') : '—' }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -258,56 +299,91 @@
                     </div>
                 </div>
 
-                <!-- 2. PARTE INFERIOR DERECHA: FICHA DEL CUSTODIO Y ARCHIVOS -->
+                <!-- 2. CADENA DE CUSTODIA (ACTUAL + ANTERIORES) -->
                 <div class="bg-white border border-zinc-300 shadow-sm rounded-none">
                     <div class="bg-zinc-800 text-white px-4 py-2.5 border-b border-zinc-700 flex items-center justify-between">
                         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                             <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
-                            Custodio y Documentación
+                            Cadena de Custodia del Activo
                         </h3>
-                        <span class="text-xs text-zinc-300 font-mono">Traspaso: {{ \Carbon\Carbon::parse($detalleAsignacion->fecha_traspaso)->format('d/m/Y') }}</span>
+                        <span class="text-xs text-zinc-300 font-mono">{{ $cadenaCustodios->count() }} traspaso(s)</span>
                     </div>
 
-                    <div class="p-4 space-y-3">
-                        <div class="flex flex-col sm:flex-row gap-3 pb-3 border-b border-zinc-200">
-                            <!-- Foto del Personal -->
-                            <div class="w-20 h-20 bg-zinc-100 border border-zinc-300 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                @if($detalleAsignacion->personal?->foto_perfil)
-                                    <img src="{{ route('personal.foto', ['path' => $detalleAsignacion->personal->foto_perfil]) }}" alt="Foto Personal" class="w-full h-full object-cover">
-                                @else
-                                    <div class="w-full h-full bg-zinc-200 flex items-center justify-center font-bold text-zinc-600 text-base">
-                                        {{ $detalleAsignacion->personal?->initials() ?? 'VIN' }}
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Información Custodio -->
-                            <div class="flex-1 min-w-0">
-                                @if($detalleAsignacion->personal)
-                                    @php $per = $detalleAsignacion->personal; @endphp
-                                    <h4 class="text-xs font-bold text-zinc-900 uppercase truncate">{{ $per->grado_academico }} {{ $per->nombre }} {{ $per->apellido }}</h4>
-                                    <p class="text-[11px] font-semibold text-blue-700 truncate">{{ $per->cargo }}</p>
-                                    <p class="text-[11px] text-zinc-500 font-mono truncate">{{ $per->correo ?? 'Sin correo registrado' }}</p>
-                                @else
-                                    <h4 class="text-xs font-bold text-zinc-700 uppercase">Sin Custodio Individual</h4>
-                                    <p class="text-[11px] text-zinc-500">Bajo responsabilidad del área receptora.</p>
-                                @endif
-
-                                <div class="mt-2 pt-1.5 border-t border-zinc-200 flex items-center gap-2 text-xs">
-                                    <span class="font-bold text-zinc-600">Área Destino:</span>
-                                    <span class="px-2 py-0.5 bg-blue-50 text-blue-900 border border-blue-200 font-bold uppercase text-[10px]">
-                                        {{ $detalleAsignacion->area_destino }}
+                    <div class="p-4 space-y-4">
+                        
+                        <!-- A. CUSTODIO ACTUAL (EL PRIMERO DE LA LISTA) -->
+                        @php $custodioActual = $cadenaCustodios->first(); @endphp
+                        @if($custodioActual)
+                            <div class="p-3 bg-blue-50/70 border-l-4 border-blue-700 border-y border-r border-blue-200 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="px-2 py-0.5 bg-blue-700 text-white font-bold text-[10px] uppercase tracking-wider">
+                                        Custodio Actual
+                                    </span>
+                                    <span class="text-[11px] font-mono text-zinc-500 font-semibold">
+                                        Desde: {{ \Carbon\Carbon::parse($custodioActual->fecha_traspaso)->format('d/m/Y') }}
                                     </span>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Lista de Archivos Adjuntos con Ojo de Previsualización -->
-                        <div>
+                                <div class="flex items-start gap-3 pt-1">
+                                    <div class="w-12 h-12 bg-white border border-zinc-300 shrink-0 flex items-center justify-center overflow-hidden">
+                                        @if($custodioActual->personal?->foto_perfil)
+                                            <img src="{{ route('personal.foto', ['path' => $custodioActual->personal->foto_perfil]) }}" class="w-full h-full object-cover">
+                                        @else
+                                            <span class="font-bold text-zinc-600 text-xs">{{ $custodioActual->personal?->initials() ?? 'VIN' }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 min-w-0 text-[11px]">
+                                        @if($custodioActual->personal)
+                                            <div class="font-bold text-zinc-900 leading-tight">
+                                                {{ $custodioActual->personal->grado_academico }} {{ $custodioActual->personal->nombre }} {{ $custodioActual->personal->apellido }}
+                                            </div>
+                                            <div class="text-blue-800 font-semibold">{{ $custodioActual->personal->cargo }}</div>
+                                            <div class="text-zinc-500 font-mono text-[10px]">{{ $custodioActual->personal->correo ?? 'Sin correo' }}</div>
+                                        @else
+                                            <div class="font-bold text-zinc-800">Área general sin custodio nominal</div>
+                                        @endif
+                                        <div class="mt-1 text-[10px]">
+                                            <span class="text-zinc-500">Oficina Actual:</span> 
+                                            <strong class="text-zinc-900 uppercase font-semibold">{{ $custodioActual->areaDestino?->nombre }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- B. CUSTODIOS ANTERIORES -->
+                        @if($cadenaCustodios->count() > 1)
+                            <div class="pt-2 border-t border-zinc-200">
+                                <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-2">
+                                    Historial de Custodios Anteriores ({{ $cadenaCustodios->count() - 1 }}):
+                                </span>
+                                <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                    @foreach($cadenaCustodios->slice(1) as $previo)
+                                        <div class="p-2 bg-zinc-50 border border-zinc-200 text-xs flex items-center justify-between">
+                                            <div class="truncate pr-2">
+                                                <div class="font-semibold text-zinc-800 text-[11px] truncate">
+                                                    {{ $previo->personal ? $previo->personal->nombre . ' ' . $previo->personal->apellido : 'Área general' }}
+                                                </div>
+                                                <div class="text-[10px] text-zinc-500">
+                                                    Área: <span class="font-medium text-zinc-700">{{ $previo->areaDestino?->nombre }}</span> 
+                                                    (Origen: {{ $previo->areaOrigen?->nombre ?? 'ALMACEN' }})
+                                                </div>
+                                            </div>
+                                            <span class="font-mono text-[10px] text-zinc-500 shrink-0 font-semibold">
+                                                {{ \Carbon\Carbon::parse($previo->fecha_traspaso)->format('d/m/Y') }}
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- C. DOCUMENTOS ADJUNTOS DE ESTA ASIGNACIÓN -->
+                        <div class="pt-2 border-t border-zinc-200">
                             <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider block mb-1.5">
-                                Documentos / Actas de Entrega ({{ $detalleAsignacion->archivos->count() }}):
+                                Actas de este Traspaso ({{ $detalleAsignacion->archivos->count() }}):
                             </span>
                             @if($detalleAsignacion->archivos->count() > 0)
                                 <div class="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto">
@@ -321,7 +397,7 @@
                                             </div>
                                             <button 
                                                 wire:click="previsualizarArchivoExistente({{ $doc->id }})" 
-                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700" 
+                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700 cursor-pointer" 
                                                 title="Previsualizar archivo"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,6 +412,7 @@
                                 <p class="text-[11px] text-zinc-400 italic">No se adjuntaron actas a este traspaso.</p>
                             @endif
                         </div>
+
                     </div>
                 </div>
 
@@ -344,9 +421,8 @@
 
     </div>
 
-
     <!-- ========================================================================= -->
-    <!-- MODAL: CREACIÓN Y EDICIÓN (CRUD COMPLETO)                                 -->
+    <!-- MODAL: CREACIÓN Y EDICIÓN                                                 -->
     <!-- ========================================================================= -->
     @if($mostrarModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-zinc-900/70 backdrop-blur-[1px]">
@@ -359,7 +435,7 @@
                             {{ $isEditing ? 'Modificar Registro de Asignación' : 'Registrar Nueva Transferencia / Asignación' }}
                         </h3>
                     </div>
-                    <button wire:click="cerrarModal" class="text-zinc-400 hover:text-white p-1">
+                    <button wire:click="cerrarModal" class="text-zinc-400 hover:text-white p-1 cursor-pointer">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -368,10 +444,10 @@
 
                 <div class="p-5 overflow-y-auto space-y-4 text-xs">
 
-                    <!-- PASO 1: SELECCIÓN DEL ACTIVO TECNOLÓGICO -->
+                    <!-- PASO 1: SELECCIÓN DEL ACTIVO -->
                     <div>
                         <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                            1. Activo Tecnológico Disponible <span class="text-rose-600">*</span>
+                            1. Activo Tecnológico <span class="text-rose-600">*</span>
                         </label>
 
                         @if(!$tecnologiaSeleccionada)
@@ -379,7 +455,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live.debounce.250ms="searchTecnologia"
-                                    placeholder="Escriba código VIN, serie, marca o nombre del activo disponible..." 
+                                    placeholder="Buscar por código VIN, serie o nombre (Disponibles o Asignados)..." 
                                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-300 rounded-none focus:bg-white focus:border-blue-600 focus:outline-none"
                                 />
 
@@ -389,7 +465,7 @@
                                             <button 
                                                 type="button" 
                                                 wire:click="seleccionarTecnologia({{ $item->id }})"
-                                                class="w-full text-left p-2 flex items-center gap-3 hover:bg-blue-50 transition-colors"
+                                                class="w-full text-left p-2 flex items-center gap-3 hover:bg-blue-50 transition-colors cursor-pointer"
                                             >
                                                 <div class="w-12 h-12 bg-zinc-100 border border-zinc-300 flex-shrink-0 flex items-center justify-center overflow-hidden">
                                                     @if($item->foto)
@@ -404,6 +480,9 @@
                                                             {{ $item->codigo_vin }}
                                                         </span>
                                                         <span class="font-bold text-zinc-600 uppercase">{{ $item->marca }}</span>
+                                                        <span class="text-[10px] font-mono px-1 border {{ $item->estado === 'Disponible' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-blue-50 text-blue-800 border-blue-300' }}">
+                                                            {{ $item->estado }}
+                                                        </span>
                                                     </div>
                                                     <div class="font-bold text-zinc-900 truncate mt-0.5">{{ $item->nombre }}</div>
                                                     <div class="text-zinc-500 font-mono text-[10px]">Serie: {{ $item->serie ?? 'S/N' }}</div>
@@ -429,6 +508,9 @@
                                                 {{ $tecnologiaSeleccionada->codigo_vin }}
                                             </span>
                                             <span class="font-bold text-zinc-700 uppercase">{{ $tecnologiaSeleccionada->marca }}</span>
+                                            <span class="text-[10px] font-mono font-bold px-1.5 border {{ $tecnologiaSeleccionada->estado === 'Disponible' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-blue-100 text-blue-900 border-blue-300' }}">
+                                                {{ $tecnologiaSeleccionada->estado }}
+                                            </span>
                                         </div>
                                         <div class="font-bold text-zinc-900 text-sm mt-0.5">{{ $tecnologiaSeleccionada->nombre }}</div>
                                         <div class="text-zinc-500 font-mono text-[10px]">Serie: {{ $tecnologiaSeleccionada->serie ?? 'No registrada' }}</div>
@@ -437,7 +519,7 @@
                                 <button 
                                     type="button" 
                                     wire:click="deseleccionarTecnologia"
-                                    class="px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-white border border-rose-300 hover:bg-rose-50"
+                                    class="px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-white border border-rose-300 hover:bg-rose-50 cursor-pointer"
                                 >
                                     Cambiar Activo
                                 </button>
@@ -448,24 +530,36 @@
 
                     <!-- PASO 2: TRAYECTORIA Y RESPONSABLE -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-zinc-200">
+                        
+                        <!-- ÁREA ORIGEN BLOQUEADA (AUTOCOMPLETADA) -->
                         <div>
-                            <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1">Área Origen</label>
-                            <input type="text" value="VIN" disabled class="w-full px-3 py-2 bg-zinc-200 border border-zinc-300 text-zinc-700 font-bold rounded-none" />
+                            <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                                Área Origen <span class="text-zinc-400 font-normal lowercase">(autocompletado)</span>
+                            </label>
+                            <select wire:model="area_origen_id" disabled class="w-full px-3 py-2 bg-zinc-200 border border-zinc-300 rounded-none text-zinc-600 font-medium cursor-not-allowed">
+                                <option value="">-- AUTOCOMPLETADO SEGÚN ACTIVO --</option>
+                                @foreach($areas as $area)
+                                    <option value="{{ $area->id }}">{{ $area->nombre }}</option>
+                                @endforeach
+                            </select>
+                            @error('area_origen_id') <span class="text-rose-600 font-semibold block mt-0.5">{{ $message }}</span> @enderror
                         </div>
 
+                        <!-- ÁREA DESTINO HABILITADA -->
                         <div>
                             <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1">
                                 Área Destino <span class="text-rose-600">*</span>
                             </label>
-                            <select wire:model="area_destino" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-300 rounded-none focus:bg-white focus:border-blue-600 focus:outline-none">
+                            <select wire:model.live="area_destino_id" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-300 rounded-none focus:bg-white focus:border-blue-600 focus:outline-none">
                                 <option value="">Seleccione el destino...</option>
-                                @foreach($areasDestino as $area)
-                                    <option value="{{ $area }}">{{ $area }}</option>
+                                @foreach($areas as $area)
+                                    <option value="{{ $area->id }}">{{ $area->nombre }}</option>
                                 @endforeach
                             </select>
-                            @error('area_destino') <span class="text-rose-600 font-semibold block mt-0.5">{{ $message }}</span> @enderror
+                            @error('area_destino_id') <span class="text-rose-600 font-semibold block mt-0.5">{{ $message }}</span> @enderror
                         </div>
 
+                        <!-- FECHA DE TRASPASO -->
                         <div>
                             <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1">
                                 Fecha de Traspaso <span class="text-rose-600">*</span>
@@ -478,15 +572,19 @@
                     <!-- SELECCIÓN DEL PERSONAL CON FOTO -->
                     <div class="pt-3 border-t border-zinc-200">
                         <label class="block font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                            Custodio Receptor (Personal) <span class="text-zinc-400 font-normal">(Opcional)</span>
+                            Nuevo Custodio Receptor <span class="text-zinc-400 font-normal">(Personal de esta Área)</span>
                         </label>
 
-                        @if(!$personalSeleccionado)
+                        @if(!$area_destino_id)
+                            <div class="p-2.5 bg-zinc-100 border border-zinc-300 text-zinc-500 text-[11px] italic">
+                                Debe seleccionar primero un <strong>Área Destino</strong> para poder listar y asignar al personal custodio.
+                            </div>
+                        @elseif(!$personalSeleccionado)
                             <div class="relative">
                                 <input 
                                     type="text" 
                                     wire:model.live.debounce.250ms="searchPersonal"
-                                    placeholder="Buscar personal por nombre, apellido o cargo..." 
+                                    placeholder="Buscar personal de esta área por nombre, apellido o cargo..." 
                                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-300 rounded-none focus:bg-white focus:border-blue-600 focus:outline-none"
                                 />
 
@@ -496,7 +594,7 @@
                                             <button 
                                                 type="button" 
                                                 wire:click="seleccionarPersonal({{ $p->id }})"
-                                                class="w-full text-left p-2 flex items-center gap-3 hover:bg-blue-50 transition-colors"
+                                                class="w-full text-left p-2 flex items-center gap-3 hover:bg-blue-50 transition-colors cursor-pointer"
                                             >
                                                 <div class="w-10 h-10 bg-zinc-200 border border-zinc-300 flex-shrink-0 flex items-center justify-center overflow-hidden">
                                                     @if($p->foto_perfil)
@@ -511,6 +609,10 @@
                                                 </div>
                                             </button>
                                         @endforeach
+                                    </div>
+                                @else
+                                    <div class="mt-1 p-2 bg-zinc-50 border border-zinc-200 text-zinc-400 text-[11px] italic">
+                                        No se encontró personal registrado en esta área de destino.
                                     </div>
                                 @endif
                             </div>
@@ -532,7 +634,7 @@
                                 <button 
                                     type="button" 
                                     wire:click="deseleccionarPersonal"
-                                    class="px-2 py-1 text-xs font-semibold text-rose-700 bg-white border border-rose-300 hover:bg-rose-50"
+                                    class="px-2 py-1 text-xs font-semibold text-rose-700 bg-white border border-rose-300 hover:bg-rose-50 cursor-pointer"
                                 >
                                     Quitar Custodio
                                 </button>
@@ -545,7 +647,7 @@
                         <div class="flex items-center justify-between mb-2">
                             <div>
                                 <span class="font-bold text-zinc-700 uppercase tracking-wider block">Actas y Documentos de Respaldo</span>
-                                <span class="text-[11px] text-zinc-400">Puedes anexar múltiples archivos (PDF o Imágenes).</span>
+                                <span class="text-[11px] text-zinc-400">Anexe actas de entrega-recepción escaneadas.</span>
                             </div>
 
                             <div>
@@ -589,7 +691,7 @@
                                             <button 
                                                 type="button" 
                                                 wire:click="previsualizarArchivoExistente({{ $guardado->id }})" 
-                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700" 
+                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700 cursor-pointer" 
                                                 title="Previsualizar"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -600,7 +702,7 @@
                                             <button 
                                                 type="button" 
                                                 wire:click="eliminarArchivoExistente({{ $guardado->id }})" 
-                                                class="p-1 bg-white hover:bg-rose-100 text-rose-700 border border-zinc-300" 
+                                                class="p-1 bg-white hover:bg-rose-100 text-rose-700 border border-zinc-300 cursor-pointer" 
                                                 title="Eliminar"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -621,13 +723,12 @@
                                         <div class="flex items-center gap-2 truncate pr-2">
                                             <span class="px-1 bg-blue-200 text-blue-900 text-[10px] font-bold font-mono">NUEVO</span>
                                             <span class="truncate font-medium text-zinc-800">{{ $arch->getClientOriginalName() }}</span>
-                                            <span class="text-[10px] text-zinc-400 font-mono">({{ round($arch->getSize() / 1024, 1) }} KB)</span>
                                         </div>
                                         <div class="flex items-center gap-1">
                                             <button 
                                                 type="button" 
                                                 wire:click="previsualizarArchivoNuevo({{ $index }})" 
-                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700" 
+                                                class="p-1 bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-700 cursor-pointer" 
                                                 title="Previsualizar"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -638,7 +739,7 @@
                                             <button 
                                                 type="button" 
                                                 wire:click="eliminarArchivoTemporal({{ $index }})" 
-                                                class="p-1 bg-white hover:bg-rose-100 text-rose-700 border border-zinc-300" 
+                                                class="p-1 bg-white hover:bg-rose-100 text-rose-700 border border-zinc-300 cursor-pointer" 
                                                 title="Quitar"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -664,7 +765,7 @@
                     <button 
                         type="button" 
                         wire:click="cerrarModal" 
-                        class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-200"
+                        class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-200 cursor-pointer"
                     >
                         Cancelar
                     </button>
@@ -672,7 +773,7 @@
                         type="button" 
                         wire:click="guardar" 
                         wire:loading.attr="disabled"
-                        class="px-5 py-2 text-xs font-bold uppercase tracking-wider text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-50"
+                        class="px-5 py-2 text-xs font-bold uppercase tracking-wider text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-50 cursor-pointer"
                     >
                         {{ $isEditing ? 'Guardar Cambios' : 'Confirmar y Guardar' }}
                     </button>
@@ -682,7 +783,6 @@
         </div>
     @endif
 
-
     <!-- ========================================================================= -->
     <!-- MODAL: PREVISUALIZADOR DE ARCHIVOS                                        -->
     <!-- ========================================================================= -->
@@ -691,11 +791,11 @@
             <div class="bg-white border-2 border-zinc-800 w-full max-w-3xl h-[85vh] flex flex-col rounded-none shadow-2xl">
                 <div class="bg-zinc-900 text-white px-4 py-2.5 flex items-center justify-between text-xs">
                     <span class="font-bold font-mono truncate max-w-lg">{{ $previewNombre }}</span>
-                    <button wire:click="cerrarPreview" class="text-zinc-400 hover:text-white font-bold text-sm">✕</button>
+                    <button wire:click="cerrarPreview" class="text-zinc-400 hover:text-white font-bold text-sm cursor-pointer">✕</button>
                 </div>
                 <div class="p-2 flex-1 bg-zinc-200 overflow-hidden flex items-center justify-center">
                     @if($previewTipo === 'imagen')
-                        <img src="{{ $previewSrc }}" alt="Preview" class="max-w-full max-h-full object-contain border border-zinc-400 bg-white">
+                        <img src="{{ $previewSrc }}" alt="Preview" class="max-h-full max-w-full object-contain border border-zinc-400 bg-white">
                     @elseif($previewTipo === 'pdf')
                         <iframe src="{{ $previewSrc }}" class="w-full h-full border-none"></iframe>
                     @else
@@ -708,7 +808,6 @@
         </div>
     @endif
 
-
     <!-- ========================================================================= -->
     <!-- MODAL: CONFIRMACIÓN DE ELIMINACIÓN                                         -->
     <!-- ========================================================================= -->
@@ -719,23 +818,23 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-900">Confirmar Eliminación</h3>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-900">Confirmar Anulación</h3>
                 </div>
                 <p class="text-xs text-zinc-600 mb-4">
-                    ¿Está seguro de que desea eliminar este registro de asignación? El activo volverá a estar <strong>Disponible</strong> en almacén y se borrarán los archivos físicos del equipo.
+                    ¿Está seguro de anular esta asignación? Por trazabilidad, el activo retrocederá su custodia al <strong>responsable inmediatamente anterior</strong> (o a Almacén si fue la única asignación).
                 </p>
                 <div class="flex items-center justify-end gap-2 text-xs">
                     <button 
                         wire:click="$set('mostrarModalEliminar', false)" 
-                        class="px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 font-bold uppercase tracking-wider text-zinc-700"
+                        class="px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 font-bold uppercase tracking-wider text-zinc-700 cursor-pointer"
                     >
                         Cancelar
                     </button>
                     <button 
                         wire:click="eliminar" 
-                        class="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 font-bold uppercase tracking-wider text-white"
+                        class="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 font-bold uppercase tracking-wider text-white cursor-pointer"
                     >
-                        Eliminar Registro
+                        Anular Asignación
                     </button>
                 </div>
             </div>

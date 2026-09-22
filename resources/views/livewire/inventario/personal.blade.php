@@ -4,7 +4,7 @@
     <div class="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Directorio de Personal</h1>
-            <p class="text-sm text-gray-500 mt-1">Gestiona los colaboradores, cargos y correos del inventario.</p>
+            <p class="text-sm text-gray-500 mt-1">Gestiona los colaboradores, áreas, cargos y correos del inventario.</p>
         </div>
         <div class="mt-4 sm:mt-0">
             <button 
@@ -61,7 +61,7 @@
             <input 
                 type="text" 
                 wire:model.live.debounce.350ms="search" 
-                placeholder="Buscar por nombre, apellido, cargo o correo..." 
+                placeholder="Buscar por nombre, cargo, área o correo..." 
                 class="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
             
             @if(!empty($search))
@@ -82,6 +82,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Personal</th>
+                        <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Área / Oficina</th>
                         <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
                         <th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Correo Electrónico</th>
                         <th scope="col" class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -115,6 +116,12 @@
                                         </div>
                                     </div>
                                 </div>
+                            </td>
+                            <!-- COLUMNA ÁREA -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    {{ $persona->area->nombre ?? 'Sin área asignada' }}
+                                </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
@@ -154,7 +161,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center">
+                            <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -242,6 +249,18 @@
                                         @error('foto_perfil') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- CAMPO ÁREA DE TRABAJO -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Área o Dependencia <span class="text-red-500">*</span></label>
+                                <select wire:model.blur="area_id" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white @error('area_id') border-red-400 bg-red-50/30 @else border-gray-300 @enderror">
+                                    <option value="">-- Seleccionar Área --</option>
+                                    @foreach ($areas as $area)
+                                        <option value="{{ $area->id }}">{{ $area->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                @error('area_id') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- NOMBRE Y APELLIDO -->

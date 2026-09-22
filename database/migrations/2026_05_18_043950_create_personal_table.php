@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('foto_perfil')->nullable(); 
             $table->string('grado_academico');
             $table->string('correo')->nullable();
+            $table->foreignId('area_id')->nullable()->constrained('areas')->onDelete('set null');
             $table->timestamps();
         });
     }

@@ -11,7 +11,7 @@
         </div>
     @endif
 
-    {{-- 2. BARRA SUPERIOR FIJA (ESTÁNDAR INSTITUCIONAL) --}}
+    {{-- 2. BARRA SUPERIOR FIJA --}}
     <div class="bg-white border border-zinc-300 p-4 mb-4 rounded-none shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="border-l-4 border-blue-700 pl-3">
             <h1 class="text-lg font-bold uppercase tracking-wider text-zinc-900 leading-tight">Control de Préstamos Tecnológicos</h1>
@@ -36,13 +36,21 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <span>+ Nuevo Préstamo</span>
             </button>
+            <button type="button" 
+                    wire:click="exportar" 
+                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs uppercase tracking-wider rounded-none transition-colors shrink-0 cursor-pointer shadow-none">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Exportar Préstamos</span>
+            </button>
         </div>
     </div>
 
-    {{-- 3. CUERPO DIVIDIDO (MASTER-DETAIL COLAPSABLE) --}}
+    {{-- 3. CUERPO DIVIDIDO (MASTER-DETAIL) --}}
     <div class="flex flex-col lg:flex-row gap-4 items-start">
         
-        {{-- COLUMNA IZQUIERDA: TABLA PRINCIPAL (PAGINACIÓN 8) --}}
+        {{-- TABLA PRINCIPAL (PAGINACIÓN 8) --}}
         <div class="transition-all duration-200 {{ $detallePrestamo ? 'w-full lg:w-7/12 xl:w-3/5' : 'w-full' }}">
             <div class="bg-white border border-zinc-300 rounded-none shadow-xs overflow-hidden">
                 <div class="bg-zinc-800 px-4 py-2.5 flex justify-between items-center text-white">
@@ -72,6 +80,7 @@
                                         <div class="font-mono text-[11px] text-zinc-500">{{ $item->tecnologia->codigo_vin }}</div>
                                     </td>
                                     <td class="py-2.5 px-3 text-[11px]">
+                                        <div class="truncate max-w-[140px] text-zinc-500"><span class="text-zinc-400">De:</span> {{ $item->areaOrigen?->nombre ?? 'ALMACEN' }}</div>
                                         <div class="truncate max-w-[140px]"><span class="text-zinc-400">A:</span> <strong class="text-zinc-800">{{ $item->area_destino }}</strong></div>
                                         @if($item->responsable)
                                             <div class="text-zinc-500 truncate max-w-[140px]">{{ $item->responsable }}</div>
@@ -105,21 +114,10 @@
                                         @endif
                                     </td>
                                     <td class="py-2.5 px-3 text-right space-x-1" onclick="event.stopPropagation()">
-                                        @if(is_null($item->fecha_devolucion_real))
-                                            <button 
-                                                wire:click="devolverActivo({{ $item->id }})"
-                                                wire:confirm="¿Confirmar retorno del activo? Volverá a estado: {{ $item->estado_previo }}."
-                                                class="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold uppercase rounded-none transition-colors cursor-pointer"
-                                                title="Registrar Devolución"
-                                            >
-                                                Devolver
-                                            </button>
-                                        @endif
-
                                         <button 
                                             wire:click="editar({{ $item->id }})"
                                             class="px-2 py-1 bg-zinc-700 hover:bg-zinc-800 text-white text-[10px] font-bold uppercase rounded-none transition-colors cursor-pointer"
-                                            title="Editar Préstamo"
+                                            title="Editar préstamo o registrar devolución"
                                         >
                                             Editar
                                         </button>
@@ -150,11 +148,10 @@
             </div>
         </div>
 
-        {{-- COLUMNA DERECHA: PANEL DE INSPECCIÓN DETALLADO (COLAPSABLE) --}}
+        {{-- PANEL DE INSPECCIÓN LATERAL --}}
         @if ($detallePrestamo)
             <div class="w-full lg:w-5/12 xl:w-2/5 space-y-4">
                 <div class="bg-white border border-zinc-300 rounded-none shadow-xs overflow-hidden">
-                    {{-- Encabezado del Panel --}}
                     <div class="bg-zinc-900 text-white px-4 py-2 flex justify-between items-center">
                         <span class="text-xs font-bold uppercase tracking-wider text-zinc-200">Panel de Inspección</span>
                         <button 
@@ -165,7 +162,7 @@
                         </button>
                     </div>
 
-                    {{-- FICHA SUPERIOR: DETALLES E IMAGEN PRINCIPAL DEL BIEN --}}
+                    {{-- FICHA SUPERIOR: ACTIVO --}}
                     <div class="p-4 border-b border-zinc-200 bg-zinc-50/50">
                         <div class="flex items-start space-x-3">
                             <img 
@@ -183,12 +180,12 @@
                         </div>
                     </div>
 
-                    {{-- FICHA INFERIOR: RESPONSABLE, ITINERARIO, MORAS Y ARCHIVOS --}}
+                    {{-- FICHA INFERIOR: DETALLES, FECHAS Y RETORNO --}}
                     <div class="p-4 space-y-3">
                         <div class="grid grid-cols-2 gap-2 text-xs border-b border-zinc-200 pb-3">
                             <div>
                                 <span class="text-[10px] uppercase text-zinc-400 font-bold block">Área de Origen</span>
-                                <span class="font-semibold text-zinc-800 font-mono">{{ $detallePrestamo->area_origen }}</span>
+                                <span class="font-semibold text-zinc-800 font-mono">{{ $detallePrestamo->areaOrigen?->nombre ?? 'ALMACEN' }}</span>
                             </div>
                             <div>
                                 <span class="text-[10px] uppercase text-zinc-400 font-bold block">Área Destino</span>
@@ -210,9 +207,17 @@
                                 <span class="text-zinc-900 font-bold">{{ \Carbon\Carbon::parse($detallePrestamo->fecha_devolucion_pactada)->format('d-m-Y') }}</span>
                             </div>
                             @if($detallePrestamo->fecha_devolucion_real)
-                                <div class="col-span-2">
-                                    <span class="text-[10px] uppercase text-zinc-400 font-bold block">Fecha Real Retorno</span>
-                                    <span class="text-emerald-700 font-bold">{{ \Carbon\Carbon::parse($detallePrestamo->fecha_devolucion_real)->format('d-m-Y') }}</span>
+                                <div class="col-span-2 space-y-1">
+                                    <div>
+                                        <span class="text-[10px] uppercase text-zinc-400 font-bold block">Fecha Real Retorno</span>
+                                        <span class="text-emerald-700 font-bold">{{ \Carbon\Carbon::parse($detallePrestamo->fecha_devolucion_real)->format('d-m-Y') }}</span>
+                                    </div>
+                                    @if($detallePrestamo->observacion_devolucion)
+                                        <div class="mt-1 p-2 bg-zinc-50 border border-zinc-200 text-zinc-700 font-sans text-[11px]">
+                                            <strong class="text-zinc-800 font-bold">Observación de Devolución:</strong>
+                                            <p class="mt-0.5">{{ $detallePrestamo->observacion_devolucion }}</p>
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
                         </div>
@@ -243,7 +248,7 @@
                             @endif
                         </div>
 
-                        {{-- LISTA DE ARCHIVOS CON OJO PREVISUALIZADOR --}}
+                        {{-- ARCHIVOS ADJUNTOS --}}
                         <div>
                             <span class="text-[10px] uppercase text-zinc-400 font-bold block mb-1.5">Expedientes Adjuntos</span>
                             <div class="space-y-1.5">
@@ -274,17 +279,17 @@
 
     </div>
 
-    {{-- 4. MODAL CRUD (CREAR / EDITAR) CON BUSCADOR ASISTIDO Y BOTÓN (+) --}}
+    {{-- 4. MODAL CRUD CON RECUADRO VERDE DE DEVOLUCIÓN --}}
     @if ($mostrarModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/75 backdrop-blur-xs p-4 overflow-y-auto">
             <div class="bg-white border border-zinc-400 rounded-none w-full max-w-2xl shadow-2xl overflow-hidden my-6">
                 
-                {{-- Cabecera del Modal --}}
+                {{-- Cabecera --}}
                 <div class="bg-zinc-900 text-white px-5 py-3 flex justify-between items-center">
                     <div class="flex items-center space-x-2">
                         <span class="w-2 h-2 bg-blue-500 rounded-none"></span>
                         <h3 class="text-xs font-bold uppercase tracking-wider text-white">
-                            {{ $isEditing ? 'Modificar Registro de Préstamo' : 'Nueva Salida / Préstamo de Activo' }}
+                            {{ $isEditing ? 'Modificar Préstamo / Registrar Devolución' : 'Nueva Salida / Préstamo de Activo' }}
                         </h3>
                     </div>
                     <button wire:click="cerrarModal" class="text-zinc-400 hover:text-white font-bold text-base cursor-pointer">&times;</button>
@@ -292,12 +297,11 @@
 
                 <form wire:submit.prevent="guardar" class="p-5 space-y-4">
                     
-                    {{-- SELECCIÓN VISUAL ASISTIDA DEL ACTIVO (BUSCADOR -> FICHA FIJA CON CAMBIAR) --}}
+                    {{-- SELECCIÓN VISUAL DEL ACTIVO --}}
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-zinc-600 mb-1">Activo Tecnológico *</label>
                         
                         @if ($tecnologiaSeleccionada)
-                            {{-- Ficha fija bloqueada con botón cambiar --}}
                             <div class="flex items-center justify-between p-3 bg-zinc-50 border border-zinc-300 rounded-none">
                                 <div class="flex items-center space-x-3">
                                     <img 
@@ -308,7 +312,7 @@
                                     <div class="text-xs">
                                         <div class="font-bold text-zinc-900 leading-tight">{{ $tecnologiaSeleccionada->nombre }}</div>
                                         <div class="font-mono text-[11px] text-zinc-500">VIN: {{ $tecnologiaSeleccionada->codigo_vin }} | Marca: {{ $tecnologiaSeleccionada->marca }}</div>
-                                        <div class="text-[10px] text-zinc-400 font-semibold uppercase">Estado: {{ $tecnologiaSeleccionada->estado }}</div>
+                                        <div class="text-[10px] text-blue-700 font-semibold uppercase">Estado Actual: {{ $tecnologiaSeleccionada->estado }}</div>
                                     </div>
                                 </div>
                                 <button 
@@ -320,12 +324,11 @@
                                 </button>
                             </div>
                         @else
-                            {{-- Input de búsqueda reactiva con sugerencias fotográficas --}}
                             <div class="relative">
                                 <input 
                                     type="text" 
                                     wire:model.live.debounce.300ms="searchTecnologia" 
-                                    placeholder="Escriba VIN, nombre o serie para buscar equipo..."
+                                    placeholder="Escriba VIN, nombre o serie para buscar equipo disponible o asignado..."
                                     class="w-full text-xs font-mono border-zinc-300 rounded-none focus:border-zinc-900 focus:ring-0 py-2 px-3 bg-zinc-50"
                                 >
                                 @if(count($tecnologiasSugeridas) > 0)
@@ -352,19 +355,23 @@
                         @error('tecnologia_id') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
-                    {{-- ÁREAS DE ORIGEN Y DESTINO --}}
+                    {{-- ÁREAS DE ORIGEN (BLOQUEADO) Y DESTINO --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] font-bold uppercase text-zinc-600 mb-1">Área Origen *</label>
+                            <label class="block text-[11px] font-bold uppercase text-zinc-600 mb-1">
+                                Área Origen <span class="text-zinc-400 font-normal lowercase">(autocompletado)</span>
+                            </label>
                             <select 
-                                wire:model="area_origen" 
-                                class="w-full text-xs font-mono border-zinc-300 rounded-none focus:border-zinc-900 focus:ring-0 py-2 px-2.5 bg-white"
+                                wire:model="area_origen_id" 
+                                disabled
+                                class="w-full text-xs font-mono bg-zinc-200 border border-zinc-300 text-zinc-600 rounded-none focus:ring-0 py-2 px-2.5 cursor-not-allowed font-medium"
                             >
-                                @foreach($areasOrigen as $area)
-                                    <option value="{{ $area }}">{{ $area }}</option>
+                                <option value="">-- AUTOCOMPLETADO SEGÚN ACTIVO --</option>
+                                @foreach($areas as $area)
+                                    <option value="{{ $area->id }}">{{ $area->nombre }}</option>
                                 @endforeach
                             </select>
-                            @error('area_origen') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
+                            @error('area_origen_id') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
@@ -372,7 +379,7 @@
                             <input 
                                 type="text" 
                                 wire:model="area_destino" 
-                                placeholder="Ej: Dirección Académica"
+                                placeholder="Ej: Dirección Académica, Auditorio, etc."
                                 class="w-full text-xs border-zinc-300 rounded-none focus:border-zinc-900 focus:ring-0 py-2 px-3"
                             >
                             @error('area_destino') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
@@ -414,10 +421,59 @@
                         </div>
                     </div>
 
+                    <!-- ============================================================== -->
+                    <!-- RECUADRO VERDE: RECEPCIÓN Y DEVOLUCIÓN FÍSICA                  -->
+                    <!-- ============================================================== -->
+                    <div class="border-2 border-emerald-600 bg-emerald-50/50 p-3.5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-emerald-200 pb-1.5">
+                            <span class="font-bold text-xs uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Recepción y Devolución del Activo Prestado
+                            </span>
+                            <span class="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 border border-emerald-300">
+                                Llenar únicamente al momento de la entrega física
+                            </span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block uppercase font-bold text-[10px] text-zinc-700 tracking-wider mb-1">
+                                    Fecha Real de Devolución <span class="text-zinc-400 font-normal lowercase">(al recibir el bien)</span>
+                                </label>
+                                <input 
+                                    type="date" 
+                                    wire:model.live="fecha_devolucion_real" 
+                                    class="w-full md:w-1/2 text-xs font-mono border-zinc-300 rounded-none focus:border-blue-700 focus:ring-0 py-2 px-3 bg-white"
+                                >
+                                @error('fecha_devolucion_real') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
+                                
+                                {{-- DIAGNÓSTICO EN TIEMPO REAL DE MORA --}}
+                                @if($this->diagnosticoRetrasoModal)
+                                    <div class="mt-2 p-2 text-xs font-mono font-bold border {{ $this->diagnosticoRetrasoModal['es_mora'] ? 'bg-rose-50 text-rose-800 border-rose-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300' }}">
+                                        {{ $this->diagnosticoRetrasoModal['mensaje'] }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <label class="block uppercase font-bold text-[10px] text-zinc-700 tracking-wider mb-1">
+                                    Observaciones de Devolución <span class="text-zinc-400 font-normal lowercase">(conformidad física, accesorios, etc.)</span>
+                                </label>
+                                <textarea 
+                                    wire:model="observacion_devolucion" 
+                                    rows="2" 
+                                    placeholder="Indique las condiciones en que se recibe el equipo (cargador, accesorios, rayones, etc.)..."
+                                    class="w-full text-xs border-zinc-300 rounded-none focus:border-blue-700 focus:ring-0 py-2 px-3 bg-white"
+                                ></textarea>
+                                @error('observacion_devolucion') <span class="text-rose-600 text-[11px] block mt-1 font-semibold">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- CARGA INCREMENTAL DE ARCHIVOS CON BOTÓN (+) --}}
                     <div class="border-t border-zinc-200 pt-3">
                         <div class="flex items-center justify-between mb-2">
-                            <label class="block text-[11px] font-bold uppercase text-zinc-700">Archivos Adjuntos</label>
+                            <label class="block text-[11px] font-bold uppercase text-zinc-700">Archivos Adjuntos (Pagaré / Acta)</label>
                             <label class="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-900 text-white text-[10px] font-bold uppercase rounded-none cursor-pointer transition-colors shadow-2xs">
                                 <span>+ Agregar Archivos</span>
                                 <input type="file" wire:model="nuevosArchivos" multiple class="hidden">
@@ -428,7 +484,7 @@
                             Cargando archivos temporales...
                         </div>
 
-                        {{-- Archivos Existentes (Si está en modo edición) --}}
+                        {{-- Archivos Existentes --}}
                         @if(!empty($archivosExistentes) && count($archivosExistentes) > 0)
                             <div class="mb-2 space-y-1">
                                 <span class="text-[10px] uppercase font-bold text-zinc-500 block">Guardados en BD:</span>
@@ -447,7 +503,7 @@
                             </div>
                         @endif
 
-                        {{-- Archivos Nuevos Acumulados --}}
+                        {{-- Archivos Nuevos --}}
                         <div class="space-y-1">
                             @forelse($archivos as $index => $file)
                                 <div class="flex items-center justify-between p-1.5 bg-blue-50 border border-blue-200 rounded-none text-xs">
@@ -479,7 +535,7 @@
                         </div>
                     </div>
 
-                    {{-- Botones de Acción del Modal --}}
+                    {{-- Botones de Acción --}}
                     <div class="border-t border-zinc-200 pt-3 flex justify-end space-x-2">
                         <button 
                             type="button" 
@@ -493,7 +549,7 @@
                             wire:loading.attr="disabled"
                             class="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold uppercase rounded-none cursor-pointer tracking-wider disabled:opacity-50"
                         >
-                            <span wire:loading.remove wire:target="guardar">{{ $isEditing ? 'Actualizar Préstamo' : 'Guardar Préstamo' }}</span>
+                            <span wire:loading.remove wire:target="guardar">{{ $isEditing ? 'Guardar Cambios' : 'Guardar Préstamo' }}</span>
                             <span wire:loading wire:target="guardar">Procesando...</span>
                         </button>
                     </div>
@@ -513,10 +569,10 @@
                 </div>
                 
                 <div class="flex-1 p-3 bg-zinc-100 flex items-center justify-center overflow-auto">
-                    @if ($previewTipo === 'imagen')
-                        <img src="{{ $previewSrc }}" class="max-h-full max-w-full object-contain border border-zinc-300 shadow-xs">
-                    @elseif ($previewTipo === 'pdf')
-                        <iframe src="{{ $previewSrc }}" class="w-full h-full border border-zinc-300"></iframe>
+                    @if ($previewType === 'image')
+                        <img src="{{ $previewUrl }}" alt="Preview" class="max-h-full max-w-full object-contain border border-zinc-300 shadow-xs">
+                    @elseif ($previewType === 'pdf')
+                        <iframe src="{{ $previewUrl }}" class="w-full h-full border border-zinc-300"></iframe>
                     @else
                         <div class="text-center font-mono text-xs text-zinc-500">
                             Vista previa no disponible para este formato.
@@ -537,7 +593,7 @@
                 </div>
                 
                 <p class="text-xs text-zinc-600">
-                    ¿Está seguro de eliminar permanentemente este registro de préstamo? Se purgarán los expedientes del disco local y, si el activo aún estaba en préstamo, se restaurará su estado original.
+                    ¿Está seguro de eliminar este registro de préstamo? Se borrarán los expedientes del disco local y, si el activo aún estaba en préstamo, se restaurará su estado previo.
                 </p>
 
                 <div class="flex justify-end space-x-2 pt-2 border-t border-zinc-200">

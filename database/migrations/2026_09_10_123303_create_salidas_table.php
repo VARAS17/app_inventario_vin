@@ -14,10 +14,15 @@ return new class extends Migration
         Schema::create('salidas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tecnologia_id')->constrained('tecnologias')->onDelete('cascade');
-            $table->string('motivo');
-            $table->string('area_destino');
-            $table->string('responsable');
+            $table->foreignId('area_origen_id')->constrained('areas')->onDelete('cascade'); // Origen autocompletado
+            
+            // Clasificación y sustento (como string flexible)
+            $table->string('tipo_baja');                 // Ej: "Obsolescencia", "Chatarreo RAEE", "Donación", etc.            
+            // Disposición final
+            $table->string('destino_final');             // A dónde va el bien
+            $table->string('responsable_recepcion')->nullable();     // Quién firma la recepción
             $table->date('fecha_salida');
+            
             $table->timestamps();
         });
     }
