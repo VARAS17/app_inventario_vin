@@ -16,12 +16,20 @@ class NativeAppServiceProvider implements ProvidesPhpIni
     {
         Window::open();
 
-        // Corre las migraciones siempre
         Artisan::call('migrate', ['--force' => true]);
 
-        // Solo siembra datos si el usuario admin no existe aún
+        // 1. Verificar el ADMIN
         if (!\App\Models\User::where('email', 'admin@universidad.edu')->exists()) {
             Artisan::call('db:seed', ['--force' => true]);
+        }
+
+        // 2. Verificar el PERSONAL (Añade esto)
+        // Esto asegura que si agregaste gente al seeder, se suban aunque el admin ya exista
+        if (\App\Models\Personal::count() === 0) {
+            Artisan::call('db:seed', [
+                '--class' => 'PersonalSeeder', 
+                '--force' => true
+            ]);
         }
     }
 
