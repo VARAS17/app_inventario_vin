@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Util;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -25,6 +26,7 @@ class DatabaseSeeder extends Seeder
         area::class,
         PersonalSeeder::class,
         tecno::class,
+        UtilesSeeder::class,
         //DebajaSeeder::class,
     ]);
     }

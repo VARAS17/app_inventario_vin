@@ -6,32 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('movimientos_utiles', function (Blueprint $table) {
             $table->id();
-            
-            // Relación con la tabla utiles
             $table->foreignId('util_id')
                   ->constrained('utiles')
                   ->onDelete('cascade');
-
-            // Tipo de movimiento: ingreso o egreso
-            $table->enum('tipo', ['Ingreso', 'Egreso']);
-            
-            // Cantidad que entra o sale
+            $table->string('tipo'); // 'Ingreso', 'Egreso', 'Saldo Inicial'
             $table->integer('cantidad');
-            
-            // Descripción del por qué del movimiento
-            $table->string('descripcion')->nullable();
-            
-            // Fecha del movimiento (opcional, ya que timestamps trae created_at)
-            $table->timestamp('fecha')->useCurrent();
-
+            $table->integer('stock_anterior');
+            $table->integer('stock_nuevo');
+            $table->string('referencia_tipo')->nullable(); // 'Recepcion', 'Entrega', 'Ajuste'
+            $table->unsignedBigInteger('referencia_id')->nullable(); // ID de la recepción o entrega
+            $table->string('descripcion')->nullable(); // Ej: "Entrega a Juan Pérez" o "Llegada PECOSA 123"
+            $table->date('fecha');
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('movimientos_utiles');

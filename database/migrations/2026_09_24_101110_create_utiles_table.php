@@ -13,12 +13,11 @@ return new class extends Migration
     {
         Schema::create('utiles', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre'); // Ej: Hojas Bond, Lapiceros
-            $table->integer('cantidad'); // Solicitado: cantidad
-            $table->string('marca'); //nuevo campo
-            // Unidad solicitada: cajas o unidad
-            $table->enum('unidad', ['Cajas', 'Paquetes', 'Unidad'])->default('Unidad');
-            
+            $table->string('nombre'); // Ej: Hojas Bond A4, Bolígrafo Azul
+            $table->string('marca')->nullable();
+            $table->string('unidad')->default('Unidad'); // 'Unidad', 'Cajas', 'Paquetes'
+            $table->integer('stock_actual')->default(0); // Cantidad física real en armario
+            $table->integer('stock_minimo')->default(5); // Para alerta visual de agotamiento
             $table->timestamps();
         });
     }

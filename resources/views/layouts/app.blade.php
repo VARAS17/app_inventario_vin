@@ -140,16 +140,54 @@
                     Mobiliario
                 </a>
 
-                {{-- UTILES --}}
-                <a href="{{ route('inventarioutil') }}"
-                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                        {{ request()->routeIs('inventarioutil') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                    Útiles de oficina
-                </a>
+                {{-- MENU DESPLEGABLE: UTILES DE OFICINA --}}
+                @php
+                    // Rutas del módulo de útiles para verificar si alguna está activa
+                    $rutasUtiles = ['inventarioutil', 'requerimiento-anual', 'entrega-personal', 'kardex-util'];
+                    $isUtilesActive = request()->routeIs($rutasUtiles);
+                @endphp
+
+                <div class="space-y-0.5">
+                    <button type="button" 
+                            id="btnUtiles"
+                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isUtilesActive ? 'text-blue-600 bg-blue-50/60 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <span>Útiles de Oficina</span>
+                        </div>
+                        <!-- Flecha indicadora -->
+                        <svg id="arrowUtiles" class="w-4 h-4 transition-transform duration-200 {{ $isUtilesActive ? 'rotate-180 text-blue-600' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <!-- Submenú desplegable -->
+                    <div id="menuUtiles" class="{{ $isUtilesActive ? 'flex' : 'hidden' }} flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
+                        
+                        <a href="{{ route('inventarioutil') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventarioutil') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Stock Actual
+                        </a>
+
+                        <a href="{{ route('requerimiento-anual') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('requerimiento-anual') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Requerimiento Anual
+                        </a>
+
+                        <a href="{{ route('entrega-personal') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('entrega-personal') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Entrega Personal
+                        </a>
+
+                        <a href="{{ route('kardex-util') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('kardex-util') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            Kardex e Historial
+                        </a>
+                    </div>
+                </div>
 
                 {{-- DADO DE BAJA --}}
                 <a href="{{ route('debaja') }}"
@@ -226,50 +264,92 @@
         </div>
     </div>
 
-    <script>
+<script>
         // Lógica para el Dropdown de Usuario
         const userRow = document.getElementById('userRow');
         const userDropdown = document.getElementById('userDropdown');
 
-        userRow.addEventListener('click', function () {
-            userDropdown.classList.toggle('hidden');
-        });
+        if (userRow && userDropdown) {
+            userRow.addEventListener('click', function () {
+                userDropdown.classList.toggle('hidden');
+            });
+        }
 
         // Lógica para el Menú Desplegable de Equipo Tecnológico
         const btnTecnologico = document.getElementById('btnTecnologico');
         const menuTecnologico = document.getElementById('menuTecnologico');
         const arrowTec = document.getElementById('arrowTec');
 
-        btnTecnologico.addEventListener('click', function() {
-            const isHidden = menuTecnologico.classList.contains('hidden');
-            
-            if (isHidden) {
+        if (btnTecnologico && menuTecnologico && arrowTec) {
+            btnTecnologico.addEventListener('click', function() {
+                const isHidden = menuTecnologico.classList.contains('hidden');
+                
+                if (isHidden) {
+                    menuTecnologico.classList.remove('hidden');
+                    menuTecnologico.classList.add('flex');
+                    arrowTec.classList.add('rotate-180');
+                } else {
+                    menuTecnologico.classList.add('hidden');
+                    menuTecnologico.classList.remove('flex');
+                    arrowTec.classList.remove('rotate-180');
+                }
+            });
+
+            // Mantener abierto si la ruta actual es de equipo tecnológico
+            if (window.location.href.includes('inventariotec') || 
+                window.location.href.includes('trasnferencia-tec') || 
+                window.location.href.includes('prestamo-tec') || 
+                window.location.href.includes('salida-tec') || 
+                window.location.href.includes('mantenimiento-tec') || 
+                window.location.href.includes('trazabilidad-tec')) {
                 menuTecnologico.classList.remove('hidden');
                 menuTecnologico.classList.add('flex');
                 arrowTec.classList.add('rotate-180');
-            } else {
-                menuTecnologico.classList.add('hidden');
-                menuTecnologico.classList.remove('flex');
-                arrowTec.classList.remove('rotate-180');
+                btnTecnologico.classList.add('bg-gray-50', 'text-gray-900');
             }
-        });
+        }
 
-        // Opcional: Mantener abierto si la ruta actual es una de las subrutas
-        // Esto es útil cuando recargas la página
-        if (window.location.href.includes('inventariotec')) {
-            menuTecnologico.classList.remove('hidden');
-            menuTecnologico.classList.add('flex');
-            arrowTec.classList.add('rotate-180');
-            btnTecnologico.classList.add('bg-gray-50', 'text-gray-900');
+        // Lógica para el Menú Desplegable de Útiles de Oficina
+        const btnUtiles = document.getElementById('btnUtiles');
+        const menuUtiles = document.getElementById('menuUtiles');
+        const arrowUtiles = document.getElementById('arrowUtiles');
+
+        if (btnUtiles && menuUtiles && arrowUtiles) {
+            btnUtiles.addEventListener('click', function() {
+                const isHidden = menuUtiles.classList.contains('hidden');
+                
+                if (isHidden) {
+                    menuUtiles.classList.remove('hidden');
+                    menuUtiles.classList.add('flex');
+                    arrowUtiles.classList.add('rotate-180');
+                } else {
+                    menuUtiles.classList.add('hidden');
+                    menuUtiles.classList.remove('flex');
+                    arrowUtiles.classList.remove('rotate-180');
+                }
+            });
+
+            // Mantener abierto si la ruta actual es de útiles de oficina
+            if (window.location.href.includes('inventarioutil') || 
+                window.location.href.includes('requerimiento-anual') || 
+                window.location.href.includes('entrega-personal') || 
+                window.location.href.includes('kardex-util')) {
+                menuUtiles.classList.remove('hidden');
+                menuUtiles.classList.add('flex');
+                arrowUtiles.classList.add('rotate-180');
+                btnUtiles.classList.add('bg-gray-50', 'text-gray-900');
+            }
         }
 
         // Cerrar dropdown de usuario si se hace click fuera
         document.addEventListener('click', function (e) {
-            if (!userRow.contains(e.target) && !userDropdown.contains(e.target)) {
+            if (userRow && userDropdown && !userRow.contains(e.target) && !userDropdown.contains(e.target)) {
                 userDropdown.classList.add('hidden');
             }
         });
     </script>
+
+
 
 </body>
 </html>

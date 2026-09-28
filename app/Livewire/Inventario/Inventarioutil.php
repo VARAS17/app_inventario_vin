@@ -4,142 +4,79 @@ namespace App\Livewire\Inventario;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use App\Models\Util;
-use App\Models\MovimientoUtil;
-use Illuminate\Support\Facades\DB;
 use Livewire\WithPagination;
+use App\Models\utiles;
+use App\Models\movimientos_utiles;
+use Exception;
 
-class Inventarioutil extends Component
+class InventarioUtil extends Component
 {
     use WithPagination;
 
     #[Layout('layouts.app')]
 
     // Propiedades del formulario
-    public $nombre, $cantidad, $marca, $unidad = 'Unidad', $util_id;
-    public $descripcion = ''; 
+    public $util_id;
+    public $nombre;
+    public $marca;
+    public $unidad = 'Unidad';
+    public $stock_actual = 0;
+    public $stock_minimo = 5;
 
-    // Propiedades de Movimientos
-    public $isOpenMovimiento = false;
-    public $tipoMovimiento = ''; 
-    public $cantidadMovimiento;
-    public $descripcionMovimiento = '';
-    public $articuloSeleccionado; 
-
-    // Propiedades de UI
+    // Filtro de búsqueda
     public $search = '';
-    public $isOpen = false;        
-    public $isHistoryOpen = false; 
-    public $historial = [];    
-        
-    // Resetear la página cuando se busca algo nuevo para evitar errores de paginación
+
+    // Estado del modal
+    public $isOpen = false;
+
+    /**
+     * Reglas de validación
+     */
+    protected function rules()
+    {
+        return [
+            'nombre'       => 'required|string|min:2|max:150',
+            'marca'        => 'nullable|string|max:100',
+            'unidad'       => 'required|string|max:50',
+            'stock_actual' => 'required|integer|min:0',
+            'stock_minimo' => 'required|integer|min:0',
+        ];
+    }
+
+    /**
+     * Mensajes de error personalizados
+     */
+    protected function messages()
+    {
+        return [
+            'nombre.required'       => 'El nombre del útil es obligatorio.',
+            'nombre.min'            => 'Debe tener al menos 2 caracteres.',
+            'unidad.required'       => 'Debe definir una unidad de medida.',
+            'stock_actual.required' => 'Indique el stock actual.',
+            'stock_actual.integer'  => 'El stock debe ser un número entero.',
+            'stock_minimo.required' => 'Indique el stock mínimo de alerta.',
+        ];
+    }
+
     public function updatingSearch()
     {
         $this->resetPage();
     }
 
-    protected $rules = [
-        'nombre' => 'required|min:3',
-        'marca' => 'required|min:2',
-        'cantidad' => 'required|numeric|min:0',
-        'unidad' => 'required',
-    ];
-
-    protected $messages = [
-        'nombre.required' => 'El nombre es obligatorio.',
-        'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
-        'marca.required' => 'La marca es obligatoria.',
-        'marca.min' => 'La marca debe tener al menos 2 caracteres.',
-        'cantidad.required' => 'La cantidad es obligatoria.',
-        'cantidad.numeric' => 'La cantidad debe ser un número.',
-        'cantidad.min' => 'La cantidad no puede ser negativa.',
-        'unidad.required' => 'La unidad es obligatoria.',
-    ];
-
     public function render()
     {
-        $utiles = Util::where(function($query) {
+        $utilesList = utiles::where(function ($query) {
                 $query->where('nombre', 'like', '%' . $this->search . '%')
-                      ->orWhere('marca', 'like', '%' . $this->search . '%');
+                      ->orWhere('marca', 'like', '%' . $this->search . '%')
+                      ->orWhere('unidad', 'like', '%' . $this->search . '%');
             })
-            ->latest()
-            ->paginate(10); 
+            ->orderBy('nombre', 'asc')
+            ->paginate(10);
 
         return view('livewire.inventario.inventarioutil', [
-            'utiles' => $utiles
+            'utilesList' => $utilesList
         ]);
     }
-
-    // --- MÉTODOS DE MOVIMIENTOS RÁPIDOS ---
-
-    public function abrirModalMovimiento($id)
-    {
-        $this->articuloSeleccionado = Util::findOrFail($id);
-        $this->tipoMovimiento = ''; 
-        $this->cantidadMovimiento = null;
-        $this->descripcionMovimiento = '';
-        $this->isOpenMovimiento = true;
-    }
-
-    public function procesarMovimiento()
-    {
-        $this->validate([
-            'tipoMovimiento' => 'required|in:Ingreso,Egreso',
-            'cantidadMovimiento' => 'required|numeric|min:1',
-            'descripcionMovimiento' => 'required|min:3',
-        ], [
-            'tipoMovimiento.required' => 'Debe seleccionar Ingreso o Egreso.',
-            'tipoMovimiento.in' => 'El tipo de movimiento no es válido.',
-            'cantidadMovimiento.required' => 'La cantidad es obligatoria.',
-            'cantidadMovimiento.min' => 'La cantidad debe ser al menos 1.',
-            'descripcionMovimiento.required' => 'Debe indicar un motivo para el historial.',
-            'descripcionMovimiento.min' => 'El motivo debe ser más descriptivo.'
-        ]);
-
-        if ($this->tipoMovimiento === 'Egreso' && $this->cantidadMovimiento > $this->articuloSeleccionado->cantidad) {
-            $this->addError('cantidadMovimiento', 'No hay suficiente stock. Stock actual: ' . $this->articuloSeleccionado->cantidad);
-            return;
-        }
-
-        DB::transaction(function () {
-            if ($this->tipoMovimiento === 'Ingreso') {
-                $this->articuloSeleccionado->increment('cantidad', $this->cantidadMovimiento);
-            } else {
-                $this->articuloSeleccionado->decrement('cantidad', $this->cantidadMovimiento);
-            }
-
-            $this->articuloSeleccionado->movimientos()->create([
-                'tipo' => $this->tipoMovimiento,
-                'cantidad' => $this->cantidadMovimiento,
-                'descripcion' => $this->descripcionMovimiento,
-                'fecha' => now(),
-            ]);
-        });
-
-        session()->flash('message', 'Stock actualizado correctamente.');
-        $this->closeMovimientoModal();
-    }
-
-    public function closeMovimientoModal()
-    {
-        $this->isOpenMovimiento = false;
-        $this->reset(['tipoMovimiento', 'cantidadMovimiento', 'descripcionMovimiento', 'articuloSeleccionado']);
-    }
-
-    public function verHistorial($id)
-    {
-        $util = Util::findOrFail($id);
-        $this->historial = $util->movimientos()->orderBy('created_at', 'desc')->get();
-        $this->isHistoryOpen = true;
-    }
-
-    public function closeHistoryModal()
-    {
-        $this->isHistoryOpen = false;
-        $this->historial = [];
-    }
-
-    // --- MÉTODOS CRUD ---
 
     public function crear()
     {
@@ -149,13 +86,16 @@ class Inventarioutil extends Component
 
     public function editar($id)
     {
-        $articulo = Util::findOrFail($id);
-        $this->util_id = $id;
-        $this->nombre = $articulo->nombre;
-        $this->marca = $articulo->marca;
-        $this->cantidad = $articulo->cantidad;
-        $this->unidad = $articulo->unidad;
-        $this->descripcion = ''; 
+        $this->resetInputFields();
+        $item = utiles::findOrFail($id);
+
+        $this->util_id      = $item->id;
+        $this->nombre       = $item->nombre;
+        $this->marca        = $item->marca;
+        $this->unidad       = $item->unidad;
+        $this->stock_actual = $item->stock_actual;
+        $this->stock_minimo = $item->stock_minimo;
+
         $this->openModal();
     }
 
@@ -163,136 +103,74 @@ class Inventarioutil extends Component
     {
         $this->validate();
 
-        DB::transaction(function () {
-            if ($this->util_id) {
-                $util = Util::find($this->util_id);
-                $cantidadAnterior = $util->cantidad;
-                $diferencia = $this->cantidad - $cantidadAnterior;
+        try {
+            $esNuevo = empty($this->util_id);
 
-                $util->update([
-                    'nombre' => $this->nombre,
-                    'marca' => $this->marca,
-                    'cantidad' => $this->cantidad,
-                    'unidad' => $this->unidad,
-                ]);
+            $util = utiles::updateOrCreate(
+                ['id' => $this->util_id],
+                [
+                    'nombre'       => $this->nombre,
+                    'marca'        => $this->marca,
+                    'unidad'       => $this->unidad,
+                    'stock_actual' => $this->stock_actual,
+                    'stock_minimo' => $this->stock_minimo,
+                ]
+            );
 
-                if ($diferencia != 0) {
-                    $util->movimientos()->create([
-                        'tipo' => $diferencia > 0 ? 'Ingreso' : 'Egreso',
-                        'cantidad' => abs($diferencia),
-                        'descripcion' => $this->descripcion ?: 'Actualización manual de datos',
-                        'fecha' => now(),
-                    ]);
-                }
-            } else {
-                $util = Util::create([
-                    'nombre' => $this->nombre,
-                    'marca' => $this->marca,
-                    'cantidad' => $this->cantidad,
-                    'unidad' => $this->unidad,
-                ]);
-
-                $util->movimientos()->create([
-                    'tipo' => 'Ingreso',
-                    'cantidad' => $this->cantidad,
-                    'descripcion' => $this->descripcion ?: 'Registro inicial',
-                    'fecha' => now(),
+            // Si es un útil nuevo y se ingresa con stock inicial mayor a 0, se deja registro en Kardex
+            if ($esNuevo && $this->stock_actual > 0) {
+                movimientos_utiles::create([
+                    'util_id'         => $util->id,
+                    'tipo'            => 'Saldo Inicial',
+                    'cantidad'        => $this->stock_actual,
+                    'stock_anterior'  => 0,
+                    'stock_nuevo'     => $this->stock_actual,
+                    'referencia_tipo' => 'Inventario Inicial',
+                    'referencia_id'   => null,
+                    'descripcion'     => 'Registro de saldo inicial en el sistema',
+                    'fecha'           => now()->toDateString(),
                 ]);
             }
-        });
 
-        session()->flash('message', $this->util_id ? 'Artículo actualizado con éxito.' : 'Artículo agregado con éxito.');
-        $this->closeModal();
+            session()->flash('message', $this->util_id ? 'Útil actualizado con éxito.' : 'Útil registrado con éxito.');
+            $this->closeModal();
+            $this->resetInputFields();
+
+        } catch (Exception $e) {
+            session()->flash('error', 'Error al guardar: ' . $e->getMessage());
+        }
     }
 
     public function eliminar($id)
     {
         try {
-            $util = Util::findOrFail($id);
-            DB::transaction(function () use ($util) {
-                $util->movimientos()->delete();
-                $util->delete();
-            });
-            session()->flash('message', 'Artículo y su historial eliminados.');
-        } catch (\Exception $e) {
-            session()->flash('error', 'Error al eliminar el artículo.');
+            $util = utiles::findOrFail($id);
+            $util->delete();
+            session()->flash('message', 'Útil eliminado del catálogo.');
+        } catch (Exception $e) {
+            session()->flash('error', 'No se pudo eliminar el útil porque tiene registros asociados.');
         }
     }
 
-    public function openModal() { $this->isOpen = true; }
-    
-    public function closeModal() 
-    { 
-        $this->isOpen = false; 
-        $this->resetInputFields();
+    public function openModal()
+    {
+        $this->isOpen = true;
+    }
+
+    public function closeModal()
+    {
+        $this->isOpen = false;
         $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     private function resetInputFields()
     {
-        $this->nombre = '';
-        $this->marca = '';
-        $this->cantidad = '';
-        $this->unidad = 'Unidad';
-        $this->descripcion = '';
-        $this->util_id = '';
-    }
-
-    // --- EXPORTACIÓN ---
-
-    public function exportar()
-    {
-        // Obtener los datos con su relación de movimientos
-        $utiles = Util::with('movimientos')
-            ->where(function($query) {
-                $query->where('nombre', 'like', '%' . $this->search . '%')
-                      ->orWhere('marca', 'like', '%' . $this->search . '%');
-            })
-            ->latest()
-            ->get();
-
-        $filename = 'reporte_completo_utiles_' . date('Y-m-d_H-i') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ];
-
-        $callback = function() use ($utiles) {
-            $file = fopen('php://output', 'w');
-            // BOM para que Excel reconozca tildes y caracteres especiales en UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); 
-
-            // ── SECCIÓN 1: STOCK ACTUAL ──
-            fputcsv($file, ['REPORTE DE INVENTARIO ACTUAL'], ';');
-            fputcsv($file, ['Nombre', 'Marca', 'Cantidad Actual', 'Unidad'], ';');
-            foreach ($utiles as $util) {
-                fputcsv($file, [$util->nombre, $util->marca, $util->cantidad, $util->unidad], ';');
-            }
-
-            // Espacio separador
-            fputcsv($file, [], ';');
-            fputcsv($file, [], ';');
-
-            // ── SECCIÓN 2: HISTORIAL DE MOVIMIENTOS ──
-            fputcsv($file, ['HISTORIAL DETALLADO DE MOVIMIENTOS'], ';');
-            fputcsv($file, ['Artículo', 'Marca', 'Tipo', 'Cantidad', 'Descripción/Motivo', 'Fecha'], ';');
-            
-            foreach ($utiles as $util) {
-                foreach ($util->movimientos as $mov) {
-                    fputcsv($file, [
-                        $util->nombre,
-                        $util->marca,
-                        $mov->tipo,
-                        $mov->cantidad,
-                        $mov->descripcion,
-                        $mov->fecha
-                    ], ';');
-                }
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        $this->util_id      = null;
+        $this->nombre       = '';
+        $this->marca        = '';
+        $this->unidad       = 'Unidad';
+        $this->stock_actual = 0;
+        $this->stock_minimo = 5;
     }
 }

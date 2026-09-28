@@ -12,6 +12,9 @@ use App\Livewire\Inventario\MantenimientoTEC;
 use App\Livewire\Inventario\PrestamoTEC;
 use App\Livewire\TrazabilidadTEC;
 use App\Livewire\AreasVIN;
+use App\Livewire\Inventario\RequerimientoAnual;
+use App\Livewire\Inventario\EntregaPersonal;
+use App\Livewire\Inventario\KardexUtil;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -80,9 +83,26 @@ Route::get('inventariomobi', Inventariomobi::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('inventariomobi');
 
+//
+
 Route::get('inventarioutil', Inventarioutil::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('inventarioutil');
+
+Route::get('requerimiento-anual', RequerimientoAnual::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('requerimiento-anual');
+
+Route::get('entrega-personal', EntregaPersonal::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('entrega-personal');
+
+Route::get('kardex-util', KardexUtil::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('kardex-util');
+
+
+//
 
 Route::get('personal', Personal::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
