@@ -128,7 +128,7 @@ class tecno extends Seeder
                 $estado = 'Disponible'; // Guardados o sin personal
             }
 
-            $codigoVin = 'UNT-VIN-' . str_pad($item['id'], 4, '0', STR_PAD_LEFT);
+            $codigoVin = 'UNT-VINTEC-' . str_pad($item['id'], 4, '0', STR_PAD_LEFT);
             $fechaIngreso = Carbon::parse($item['created_at'])->toDateString();
 
             // A. Insertar o Actualizar el Activo en `tecnologias`

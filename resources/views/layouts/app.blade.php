@@ -18,8 +18,8 @@
 
             {{-- Logo --}}
             <div class="flex flex-col items-center gap-3 px-4 py-6 border-b border-gray-200">
-                <div class="w-24 h-24 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                    <img src="{{ asset('logovice.jpg') }}" 
+                <div class="w-30 h-30 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                    <img src="{{ asset('logovice.png') }}" 
                         alt="Logo Vicerrectorado" 
                         class="w-full h-full object-contain">
                 </div>
@@ -70,9 +70,8 @@
                     Personal
                 </a>
                 
-                {{-- MENU DESPLEGABLE: EQUIPO TECNOLOGICO --}}
+                {{-- MENU DESPLEGABLE: EQUIPO TECNOLOGICO (AZUL) --}}
                 @php
-                    // Definimos las rutas hijas para verificar si alguna está activa
                     $rutasTec = ['inventariotec', 'trasnferencia-tec', 'prestamo-tec', 'salida-tec', 'mantenimiento-tec','trazabilidad-tec'];
                     $isTecActive = request()->routeIs($rutasTec);
                 @endphp
@@ -80,7 +79,7 @@
                 <div class="space-y-0.5">
                     <button type="button" 
                             id="btnTecnologico"
-                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isTecActive ? 'text-blue-600 bg-blue-50/60 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isTecActive ? 'text-blue-600 bg-blue-50/70 font-medium' : 'text-gray-600 hover:bg-blue-50/40 hover:text-blue-600' }}">
                         <div class="flex items-center gap-2.5">
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
@@ -88,61 +87,85 @@
                             </svg>
                             <span>Equipo Tecnológico</span>
                         </div>
-                        <!-- Si está activo, la flecha se queda girada -->
                         <svg id="arrowTec" class="w-4 h-4 transition-transform duration-200 {{ $isTecActive ? 'rotate-180 text-blue-600' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    <!-- Si está activo, se quita la clase 'hidden' y se pone 'flex' -->
                     <div id="menuTecnologico" class="{{ $isTecActive ? 'flex' : 'hidden' }} flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
-                        
                         <a href="{{ route('inventariotec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventariotec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventariotec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Ver Todo
                         </a>
-
                         <a href="{{ route('trasnferencia-tec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trasnferencia-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trasnferencia-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Transferencia
                         </a>
-
                         <a href="{{ route('prestamo-tec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('prestamo-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('prestamo-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Prestamo
                         </a>
-
                         <a href="{{ route('salida-tec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('salida-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('salida-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Salida
                         </a>
-
                         <a href="{{ route('mantenimiento-tec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('mantenimiento-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('mantenimiento-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Mantenimiento
                         </a>
-        
                         <a href="{{ route('trazabilidad-tec') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trazabilidad-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trazabilidad-tec') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50/40' }}">
                             Trazabilidad
                         </a>
                     </div>
                 </div>
 
-                {{-- MOBILIARIO --}}
-                <a href="{{ route('inventariomobi') }}"
-                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                        {{ request()->routeIs('inventariomobi') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Mobiliario
-                </a>
-
-                {{-- MENU DESPLEGABLE: UTILES DE OFICINA --}}
+                {{-- MENU DESPLEGABLE: MOBILIARIO (MARRÓN CLARO / ÁMBAR) --}}
                 @php
-                    // Rutas del módulo de útiles para verificar si alguna está activa
+                    $rutasMobi = ['inventariomobi', 'transmobi', 'salidamobi', 'trazabilidad-inmbo'];
+                    $isMobiActive = request()->routeIs($rutasMobi);
+                @endphp
+
+                <div class="space-y-0.5">
+                    <button type="button" 
+                            id="btnMobiliario"
+                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isMobiActive ? 'text-amber-800 bg-amber-50 font-medium' : 'text-gray-600 hover:bg-amber-50/40 hover:text-amber-800' }}">
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <span>Mobiliario</span>
+                        </div>
+                        <svg id="arrowMobi" class="w-4 h-4 transition-transform duration-200 {{ $isMobiActive ? 'rotate-180 text-amber-700' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div id="menuMobiliario" class="{{ $isMobiActive ? 'flex' : 'hidden' }} flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
+                        <a href="{{ route('inventariomobi') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventariomobi') ? 'bg-amber-100/70 text-amber-800 font-semibold' : 'text-gray-500 hover:text-amber-800 hover:bg-amber-50/40' }}">
+                            Inventario INMBO
+                        </a>
+
+                        <a href="{{ route('transmobi') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('transmobi') ? 'bg-amber-100/70 text-amber-800 font-semibold' : 'text-gray-500 hover:text-amber-800 hover:bg-amber-50/40' }}">
+                            Transferencia INMBO
+                        </a>
+
+                        <a href="{{ route('salidamobi') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('salidamobi') ? 'bg-amber-100/70 text-amber-800 font-semibold' : 'text-gray-500 hover:text-amber-800 hover:bg-amber-50/40' }}">
+                            Salida INMBO
+                        </a>
+                        <a href="{{ route('trazabilidad-inmbo') }}" 
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('trazabilidad-inmbo') ? 'bg-amber-100/70 text-amber-800 font-semibold' : 'text-gray-500 hover:text-amber-800 hover:bg-amber-50/40' }}">
+                            Trazabilidad INMBO
+                        </a>
+                    </div>
+                </div>
+
+                {{-- MENU DESPLEGABLE: UTILES DE OFICINA (VERDE) --}}
+                @php
                     $rutasUtiles = ['inventarioutil', 'requerimiento-anual', 'entrega-personal', 'kardex-util'];
                     $isUtilesActive = request()->routeIs($rutasUtiles);
                 @endphp
@@ -150,7 +173,7 @@
                 <div class="space-y-0.5">
                     <button type="button" 
                             id="btnUtiles"
-                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isUtilesActive ? 'text-blue-600 bg-blue-50/60 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none {{ $isUtilesActive ? 'text-emerald-700 bg-emerald-50 font-medium' : 'text-gray-600 hover:bg-emerald-50/40 hover:text-emerald-700' }}">
                         <div class="flex items-center gap-2.5">
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
@@ -158,47 +181,33 @@
                             </svg>
                             <span>Útiles de Oficina</span>
                         </div>
-                        <!-- Flecha indicadora -->
-                        <svg id="arrowUtiles" class="w-4 h-4 transition-transform duration-200 {{ $isUtilesActive ? 'rotate-180 text-blue-600' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg id="arrowUtiles" class="w-4 h-4 transition-transform duration-200 {{ $isUtilesActive ? 'rotate-180 text-emerald-600' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    <!-- Submenú desplegable -->
                     <div id="menuUtiles" class="{{ $isUtilesActive ? 'flex' : 'hidden' }} flex-col pl-9 space-y-0.5 overflow-hidden transition-all duration-300">
-                        
                         <a href="{{ route('inventarioutil') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventarioutil') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('inventarioutil') ? 'bg-emerald-100/70 text-emerald-700 font-semibold' : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/40' }}">
                             Stock Actual
                         </a>
 
                         <a href="{{ route('requerimiento-anual') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('requerimiento-anual') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('requerimiento-anual') ? 'bg-emerald-100/70 text-emerald-700 font-semibold' : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/40' }}">
                             Requerimiento Anual
                         </a>
 
                         <a href="{{ route('entrega-personal') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('entrega-personal') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('entrega-personal') ? 'bg-emerald-100/70 text-emerald-700 font-semibold' : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/40' }}">
                             Entrega Personal
                         </a>
 
                         <a href="{{ route('kardex-util') }}" 
-                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('kardex-util') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                        class="block px-3 py-1.5 text-xs rounded-md transition-colors {{ request()->routeIs('kardex-util') ? 'bg-emerald-100/70 text-emerald-700 font-semibold' : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/40' }}">
                             Kardex e Historial
                         </a>
                     </div>
                 </div>
-
-                {{-- DADO DE BAJA --}}
-                <a href="{{ route('debaja') }}"
-                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
-                        {{ request()->routeIs('debaja') ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                    </svg>
-                    DADO DE BAJA
-                </a>
                             
             </nav>
 
@@ -264,8 +273,8 @@
         </div>
     </div>
 
-<script>
-        // Lógica para el Dropdown de Usuario
+    <script>
+        // Dropdown de Usuario
         const userRow = document.getElementById('userRow');
         const userDropdown = document.getElementById('userDropdown');
 
@@ -275,81 +284,56 @@
             });
         }
 
-        // Lógica para el Menú Desplegable de Equipo Tecnológico
-        const btnTecnologico = document.getElementById('btnTecnologico');
-        const menuTecnologico = document.getElementById('menuTecnologico');
-        const arrowTec = document.getElementById('arrowTec');
+        // Función para inicializar acordeones
+        function setupCollapsible(btnId, menuId, arrowId, routeKeywords) {
+            const btn = document.getElementById(btnId);
+            const menu = document.getElementById(menuId);
+            const arrow = document.getElementById(arrowId);
 
-        if (btnTecnologico && menuTecnologico && arrowTec) {
-            btnTecnologico.addEventListener('click', function() {
-                const isHidden = menuTecnologico.classList.contains('hidden');
-                
-                if (isHidden) {
-                    menuTecnologico.classList.remove('hidden');
-                    menuTecnologico.classList.add('flex');
-                    arrowTec.classList.add('rotate-180');
-                } else {
-                    menuTecnologico.classList.add('hidden');
-                    menuTecnologico.classList.remove('flex');
-                    arrowTec.classList.remove('rotate-180');
+            if (btn && menu && arrow) {
+                btn.addEventListener('click', function() {
+                    const isHidden = menu.classList.contains('hidden');
+                    if (isHidden) {
+                        menu.classList.remove('hidden');
+                        menu.classList.add('flex');
+                        arrow.classList.add('rotate-180');
+                    } else {
+                        menu.classList.add('hidden');
+                        menu.classList.remove('flex');
+                        arrow.classList.remove('rotate-180');
+                    }
+                });
+
+                // Comprobar si coincide la URL para mantener abierto
+                const currentUrl = window.location.href;
+                const isCurrentActive = routeKeywords.some(keyword => currentUrl.includes(keyword));
+                if (isCurrentActive) {
+                    menu.classList.remove('hidden');
+                    menu.classList.add('flex');
+                    arrow.classList.add('rotate-180');
                 }
-            });
-
-            // Mantener abierto si la ruta actual es de equipo tecnológico
-            if (window.location.href.includes('inventariotec') || 
-                window.location.href.includes('trasnferencia-tec') || 
-                window.location.href.includes('prestamo-tec') || 
-                window.location.href.includes('salida-tec') || 
-                window.location.href.includes('mantenimiento-tec') || 
-                window.location.href.includes('trazabilidad-tec')) {
-                menuTecnologico.classList.remove('hidden');
-                menuTecnologico.classList.add('flex');
-                arrowTec.classList.add('rotate-180');
-                btnTecnologico.classList.add('bg-gray-50', 'text-gray-900');
             }
         }
 
-        // Lógica para el Menú Desplegable de Útiles de Oficina
-        const btnUtiles = document.getElementById('btnUtiles');
-        const menuUtiles = document.getElementById('menuUtiles');
-        const arrowUtiles = document.getElementById('arrowUtiles');
+        // Inicializar Menús Desplegables
+        setupCollapsible('btnTecnologico', 'menuTecnologico', 'arrowTec', [
+            'inventariotec', 'trasnferencia-tec', 'prestamo-tec', 'salida-tec', 'mantenimiento-tec', 'trazabilidad-tec'
+        ]);
 
-        if (btnUtiles && menuUtiles && arrowUtiles) {
-            btnUtiles.addEventListener('click', function() {
-                const isHidden = menuUtiles.classList.contains('hidden');
-                
-                if (isHidden) {
-                    menuUtiles.classList.remove('hidden');
-                    menuUtiles.classList.add('flex');
-                    arrowUtiles.classList.add('rotate-180');
-                } else {
-                    menuUtiles.classList.add('hidden');
-                    menuUtiles.classList.remove('flex');
-                    arrowUtiles.classList.remove('rotate-180');
-                }
-            });
+        setupCollapsible('btnMobiliario', 'menuMobiliario', 'arrowMobi', [
+            'inventariomobi', 'transmobi', 'salidamobi', 'trazabilidad-inmbo'
+        ]);
 
-            // Mantener abierto si la ruta actual es de útiles de oficina
-            if (window.location.href.includes('inventarioutil') || 
-                window.location.href.includes('requerimiento-anual') || 
-                window.location.href.includes('entrega-personal') || 
-                window.location.href.includes('kardex-util')) {
-                menuUtiles.classList.remove('hidden');
-                menuUtiles.classList.add('flex');
-                arrowUtiles.classList.add('rotate-180');
-                btnUtiles.classList.add('bg-gray-50', 'text-gray-900');
-            }
-        }
+        setupCollapsible('btnUtiles', 'menuUtiles', 'arrowUtiles', [
+            'inventarioutil', 'requerimiento-anual', 'entrega-personal', 'kardex-util'
+        ]);
 
-        // Cerrar dropdown de usuario si se hace click fuera
+        // Cerrar dropdown de usuario si se hace clic fuera
         document.addEventListener('click', function (e) {
             if (userRow && userDropdown && !userRow.contains(e.target) && !userDropdown.contains(e.target)) {
                 userDropdown.classList.add('hidden');
             }
         });
     </script>
-
-
-
 </body>
 </html>

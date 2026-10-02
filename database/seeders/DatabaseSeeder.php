@@ -24,9 +24,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
         area::class,
-        PersonalSeeder::class,
-        tecno::class,
-        UtilesSeeder::class,
+        //PersonalSeeder::class,
+        //tecno::class,
+        //UtilesSeeder::class,
         //DebajaSeeder::class,
     ]);
     }

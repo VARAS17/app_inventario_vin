@@ -45,7 +45,7 @@ class AreasVIN extends Component
     public function render()
     {
         $areas = Area::where('nombre', 'like', '%' . $this->search . '%')
-            ->orderBy('nombre', 'asc')
+            ->orderBy('id', 'asc')
             ->paginate(10);
 
         return view('livewire.areas-v-i-n', [

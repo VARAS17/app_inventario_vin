@@ -13,17 +13,20 @@ return new class extends Migration
     {
         Schema::create('mobiliarios', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre'); 
-            $table->string('material'); 
-            $table->string('color');    
             
-            // Campo de imagen añadido
-            $table->string('imagen')->nullable(); // Guarda la ruta del archivo
+            // Identificación
+            $table->string('codigo_vin')->unique(); // UNT-VINMOB-0001
+            $table->string('codigo_inventario_unt')->nullable(); // Placa patrimonial opcional
+            $table->string('nombre'); // Ej: Silla ejecutiva ergonómica, Mesa de reuniones
             
-            $table->enum('estado', ['Bueno', 'Regular', 'A la basura'])->default('Bueno');
-            $table->enum('lugar',['Oficina principal','Sala de Reuniones','Oficina de comunicaciones', 'Almacen', 'Cocina'])->default('Oficina Principal');
+            // Detalles del bien
+            $table->string('proveedor')->nullable();
+            $table->text('descripcion')->nullable(); // Material, color, medidas, notas
+            $table->string('foto')->nullable(); // Foto principal (OPCIONAL)
             
-            $table->foreignId('personal_id')->nullable()->constrained('personal')->onDelete('set null');
+            // Estado y Fecha
+            $table->enum('estado', ['Disponible', 'Asignado', 'De baja'])->default('Disponible');
+            $table->date('fecha_ingreso');
             
             $table->timestamps();
         });

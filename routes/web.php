@@ -3,9 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Inventario\Inventariotec;
 use App\Livewire\Inventario\Inventariomobi;
+use App\Livewire\Inventario\TransfereciaINMBO;
+use App\Livewire\Inventario\SalidaINMBO;
+use App\Livewire\TrazabilidadINMBO;
 use App\Livewire\Inventario\Inventarioutil;
 use App\Livewire\Inventario\Personal;
-use App\Livewire\Inventario\Debaja;
 use App\Livewire\Inventario\TrasnferenciaTEC;
 use App\Livewire\Inventario\SalidaTEC;
 use App\Livewire\Inventario\MantenimientoTEC;
@@ -18,7 +20,7 @@ use App\Livewire\Inventario\KardexUtil;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
-Route::view('/', 'welcome');
+Route::redirect('/', 'login');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
@@ -27,10 +29,6 @@ Route::view('dashboard', 'dashboard')
 Route::get('areavin', AreasVIN::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('areavin');
-
-Route::get('debaja', Debaja::class)
-    ->middleware(['auth', 'verified']) // Añade seguridad
-    ->name('debaja');
 
 //MENU DE OPCIONES PARA EL INVENTARIO TECNOLOGICO 
 
@@ -82,6 +80,18 @@ Route::get('/tecnologia-pdf/{path}', function ($path) {
 Route::get('inventariomobi', Inventariomobi::class)
     ->middleware(['auth', 'verified']) // Añade seguridad
     ->name('inventariomobi');
+
+Route::get('transmobi', TransfereciaINMBO::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('transmobi');
+
+Route::get('salidamobi', SalidaINMBO::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('salidamobi');
+
+Route::get('trazabilidad-inmbo', TrazabilidadINMBO::class)
+    ->middleware(['auth', 'verified']) // Añade seguridad
+    ->name('trazabilidad-inmbo');
 
 //
 

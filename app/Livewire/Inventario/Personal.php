@@ -106,7 +106,7 @@ class Personal extends Component
                           $q->where('nombre', 'like', '%' . $this->search . '%');
                       });
             })
-            ->latest()
+            ->oldest('nombre')
             ->paginate(10);
 
         // Se envía el listado de áreas para llenar el <select> en la vista

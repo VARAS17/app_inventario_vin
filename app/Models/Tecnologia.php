@@ -34,7 +34,7 @@ class Tecnologia extends Model
         $ultimo = self::orderBy('id', 'desc')->first();
 
         if (!$ultimo || !$ultimo->codigo_vin) {
-            return 'UNT-VIN-0001';
+            return 'UNT-VINTEC-0001';
         }
 
         // Extrae los últimos 4 dígitos numéricos y le suma 1
@@ -42,7 +42,7 @@ class Tecnologia extends Model
         $ultimoNumero = intval(end($partes));
         $siguienteNumero = str_pad($ultimoNumero + 1, 4, '0', STR_PAD_LEFT);
 
-        return 'UNT-VIN-' . $siguienteNumero;
+        return 'UNT-VINTEC-' . $siguienteNumero;
     }
 
     // Archivos propios del equipo
