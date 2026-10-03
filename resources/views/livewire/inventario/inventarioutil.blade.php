@@ -1,133 +1,172 @@
 <div class="p-6">
-    <div class="max-w-7xl mx-auto">
-        <!-- HEADER -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h1 class="text-2xl font-bold text-gray-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Inventario de Útiles y Papelería
-            </h1>
-            
-            <div class="flex items-center gap-4 w-full md:w-auto">
-                <input type="text" wire:model.live="search" placeholder="Buscar artículo..." 
-                    class="border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 w-full md:w-64">
-                
-                <button wire:click="crear" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md flex items-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    Nuevo Artículo
-                </button>
-            </div>
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Catálogo y Stock Actual</h1>
+            <p class="text-sm text-gray-500">Existencias físicas de útiles en la oficina</p>
         </div>
+        <button 
+            wire:click="crear" 
+            class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 shadow-sm flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Útil
+        </button>
+    </div>
 
-        @if (session()->has('message'))
-            <div class="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded mb-4 shadow-sm">
-                {{ session('message') }}
-            </div>
-        @endif
+    <!-- Mensajes Flash -->
+    @if (session()->has('message'))
+        <div class="mb-4 p-4 bg-green-100 border border-green-300 text-green-800">
+            {{ session('message') }}
+        </div>
+    @endif
+    @if (session()->has('error'))
+        <div class="mb-4 p-4 bg-red-100 border border-red-300 text-red-800">
+            {{ session('error') }}
+        </div>
+    @endif
 
-        <!-- TABLA -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Descripción del Artículo</th>
-                        <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Stock Actual</th>
-                        <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic">Unidad</th>
-                        <th class="px-6 py-3 text-xs font-semibold text-gray-600 uppercase italic text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    @forelse($utiles as $util)
-                    <tr wire:key="util-{{ $util->id }}" class="hover:bg-emerald-50/30 transition border-b border-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">
-                            {{ $util->nombre }}
+    <!-- Buscador -->
+    <div class="mb-4">
+        <input 
+            wire:model.live.debounce.300ms="search" 
+            type="text" 
+            placeholder="Buscar por nombre, marca o unidad..." 
+            class="w-full md:w-1/3 px-4 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+    </div>
+
+    <!-- Tabla de Existencias -->
+    <div class="bg-white shadow-sm overflow-hidden border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-gray-600 uppercase font-semibold text-xs">
+                <tr>
+                    <th class="px-6 py-3 text-left">Útil / Artículo</th>
+                    <th class="px-6 py-3 text-left">Marca</th>
+                    <th class="px-6 py-3 text-left">Unidad</th>
+                    <th class="px-6 py-3 text-center">Stock Actual</th>
+                    <th class="px-6 py-3 text-center">Stock Mínimo</th>
+                    <th class="px-6 py-3 text-center">Estado</th>
+                    <th class="px-6 py-3 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @forelse ($utilesList as $item)
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900">{{ $item->nombre }}</td>
+                        <td class="px-6 py-4 text-gray-600">{{ $item->marca ?? '-' }}</td>
+                        <td class="px-6 py-4 text-gray-600">{{ $item->unidad }}</td>
+                        <td class="px-6 py-4 text-center font-bold text-base">
+                            {{ $item->stock_actual }}
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1 text-sm font-bold rounded-full {{ $util->cantidad <= 5 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
-                                {{ $util->cantidad }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-gray-500 italic text-sm">
-                            {{ $util->unidad }}
-                        </td>
+                        <td class="px-6 py-4 text-center text-gray-500">{{ $item->stock_minimo }}</td>
                         <td class="px-6 py-4 text-center">
-                            <div class="flex justify-center gap-3">
-                                <button wire:click="editar({{ $util->id }})" class="text-blue-500 hover:text-blue-700 transition" title="Editar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                </button>
-                                <button wire:click="eliminar({{ $util->id }})" 
-                                    wire:confirm="¿Estás seguro de eliminar este artículo del stock?" 
-                                    class="text-red-400 hover:text-red-600 transition" title="Eliminar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </div>
+                            @if ($item->stock_actual <= 0)
+                                <span class="px-2.5 py-1 text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                    Agotado
+                                </span>
+                            @elseif ($item->stock_actual <= $item->stock_minimo)
+                                <span class="px-2.5 py-1 text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                                    Por Agotarse
+                                </span>
+                            @else
+                                <span class="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                                    Disponible
+                                </span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button wire:click="editar({{ $item->id }})" class="text-blue-600 hover:text-blue-800 font-medium">Editar</button>
+                            <button 
+                                wire:click="eliminar({{ $item->id }})" 
+                                wire:confirm="¿Seguro que deseas eliminar este útil del catálogo?" 
+                                class="text-red-600 hover:text-red-800 font-medium">
+                                Eliminar
+                            </button>
                         </td>
                     </tr>
-                    @empty
+                @empty
                     <tr>
-                        <td colspan="4" class="p-8 text-center text-gray-400 italic">No hay artículos en el inventario.</td>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            No se encontraron útiles registrados en el catálogo.
+                        </td>
                     </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                @endforelse
+            </tbody>
+        </table>
+        
+        <div class="p-4 border-t border-gray-200">
+            {{ $utilesList->links() }}
         </div>
     </div>
 
-    <!-- MODAL -->
-    @if($isOpen)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        
-        <!-- Backdrop con desenfoque separado para no afectar al modal -->
-        <div class="fixed inset-0 bg-gray-900/10 backdrop-blur-sm transition-opacity" wire:click="closeModal"></div>
+    <!-- Modal Formulario -->
+    @if ($isOpen)
+        <div class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white shadow-xl max-w-md w-full overflow-hidden border border-gray-300">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        {{ $util_id ? 'Editar Útil' : 'Registrar Nuevo Útil' }}
+                    </h3>
+                    <button wire:click="closeModal" class="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none">&times;</button>
+                </div>
 
-        <!-- Caja del Modal nítida -->
-        <div class="relative bg-white rounded-2xl shadow-2xl transform transition-all sm:max-w-md sm:w-full overflow-hidden border border-gray-100 z-10">
-            <div class="bg-white px-6 py-5">
-                <h3 class="text-xl font-bold text-emerald-800 mb-4 border-b pb-2">
-                    {{ $util_id ? 'Editar Artículo' : 'Nuevo Artículo de Oficina' }}
-                </h3>
-                
-                <div class="space-y-4">
+                <form wire:submit.prevent="guardar" class="p-6 space-y-4">
+                    <!-- Nombre -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 italic">Nombre / Descripción</label>
-                        <input type="text" wire:model="nombre" placeholder="Ej: Papel Bond A4" 
-                            class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-                        @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Útil *</label>
+                        <input type="text" wire:model="nombre" class="w-full px-3 py-2 border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none" placeholder="Ej: Hojas Bond A4 75gr">
+                        @error('nombre') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
+                    <!-- Marca -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                        <input type="text" wire:model="marca" class="w-full px-3 py-2 border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none" placeholder="Ej: Atlas, Faber-Castell, etc.">
+                        @error('marca') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
+                    <!-- Unidad -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Unidad de Medida *</label>
+                        <select wire:model="unidad" class="w-full px-3 py-2 border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            <option value="Unidad">Unidad</option>
+                            <option value="Cajas">Cajas</option>
+                            <option value="Paquetes">Paquetes</option>
+                            <option value="Millares">Millares</option>
+                            <option value="Docenas">Docenas</option>
+                        </select>
+                        @error('unidad') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
+                    <!-- Stock Actual y Mínimo -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 italic">Cantidad</label>
-                            <input type="number" wire:model="cantidad" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-                            @error('cantidad') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ $util_id ? 'Stock Actual *' : 'Stock Inicial *' }}
+                            </label>
+                            <input type="number" wire:model="stock_actual" min="0" class="w-full px-3 py-2 border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            @error('stock_actual') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 italic">Unidad de Medida</label>
-                            <select wire:model="unidad" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
-                                <option value="Unidad">Unidad</option>
-                                <option value="Cajas">Cajas</option>
-                            </select>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Alerta Stock Mínimo *</label>
+                            <input type="number" wire:model="stock_minimo" min="0" class="w-full px-3 py-2 border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            @error('stock_minimo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-2">
-                <button wire:click="guardar" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-md">
-                    {{ $util_id ? 'Actualizar Stock' : 'Agregar Artículo' }}
-                </button>
-                <button wire:click="closeModal" type="button" class="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-50 transition">
-                    Cancelar
-                </button>
+                    <!-- Botones Modal -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" wire:click="closeModal" class="px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-100">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700">
+                            Guardar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
     @endif
 </div>

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Util;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -20,5 +21,13 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@universidad.edu',
             'password' => Hash::make('admin123'), // Esta será tu contraseña
         ]);
+
+        $this->call([
+        area::class,
+        //PersonalSeeder::class,
+        //tecno::class,
+        //UtilesSeeder::class,
+        //DebajaSeeder::class,
+    ]);
     }
 }
